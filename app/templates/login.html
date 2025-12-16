@@ -45,12 +45,6 @@
             {% endwith %}
 
             <form method="POST">
-                <form method="POST" action="">
-    {{ form.hidden_tag() }}  ```
-
-**Alternative:** If you are not using `form.hidden_tag()`, you must manually add:
-```html
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="form-floating mb-3">
