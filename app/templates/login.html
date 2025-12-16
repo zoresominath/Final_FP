@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Bachelor's Kitchen{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+        min-height: 100vh;
+    }
+    .login-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+    }
+    .brand-title {
+        font-family: 'Lobster', cursive;
+        color: #0d6efd;
+        font-size: 2.5rem;
+    }
+    .form-floating:focus-within {
+        z-index: 2;
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-center w-100" style="min-height: 100vh;">
+    <div class="col-md-4 col-sm-10">
+        <div class="card login-card p-5">
+            <div class="text-center mb-4">
+                <h1 class="brand-title">Bachelor's Kitchen</h1>
+                <p class="text-muted">Please sign in to continue</p>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-floating mb-3">
+                    <input name="username" class="form-control" id="floatingInput" placeholder="Username" required>
+                    <label for="floatingInput">Username</label>
+                </div>
+                <div class="form-floating mb-4">
+                    <input name="password" type="password" class="form-control" id="floatingPassword" placeholder="Password" required>
+                    <label for="floatingPassword">Password</label>
+                </div>
+                <button class="btn btn-primary w-100 py-2 fs-5 fw-bold shadow-sm">Login</button>
+            </form>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{{ url_for('main.register') }}" class="text-decoration-none">Create Account</a>
+                <a href="{{ url_for('main.forgot_password') }}" class="text-decoration-none text-muted">Forgot Password?</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

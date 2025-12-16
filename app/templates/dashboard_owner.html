@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Custom Owner Styles */
+    .stat-card { color: white; border: none; overflow: hidden; position: relative; }
+    .stat-card h2 { font-weight: 700; }
+    .stat-card .icon-bg { position: absolute; right: 10px; bottom: 10px; font-size: 4rem; opacity: 0.2; }
+    .bg-gradient-blue { background: linear-gradient(45deg, #0d6efd, #0dcaf0); }
+    .bg-gradient-orange { background: linear-gradient(45deg, #fd7e14, #ffc107); }
+    .bg-gradient-green { background: linear-gradient(45deg, #198754, #20c997); }
+    .bg-gradient-red { background: linear-gradient(45deg, #dc3545, #f06595); }
+    
+    /* Profile Image Style */
+    .profile-section {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+    .sidebar-profile-img {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #e9ecef;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        margin-bottom: 10px;
+    }
+
+    /* Decorated Navigation Buttons */
+    .nav-pills .nav-link {
+        color: #495057;
+        font-weight: 500;
+        padding: 10px 15px;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        margin-bottom: 5px;
+        border: 1px solid transparent;
+    }
+    .nav-pills .nav-link:hover {
+        background-color: #f8f9fa;
+        color: #0d6efd;
+        border-color: #e9ecef;
+        transform: translateX(5px);
+    }
+    .nav-pills .nav-link.active {
+        background: linear-gradient(45deg, #0d6efd, #0a58ca);
+        color: white;
+        box-shadow: 0 4px 6px rgba(13, 110, 253, 0.3);
+        border-color: transparent;
+    }
+    .nav-pills .nav-link i {
+        font-size: 1.1rem;
+        margin-right: 10px;
+        vertical-align: middle;
+    }
+    
+    /* Attractive Title Style */
+    .mess-title-gradient {
+        background: -webkit-linear-gradient(45deg, #0d6efd, #0dcaf0);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: 'Lobster', cursive;
+        font-size: 2.2rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Chart Containers */
+    .chart-container {
+        position: relative;
+        height: 200px;
+        width: 100%;
+    }
+</style>
+
+<div class="sidebar">
+    <div class="profile-section">
+        {% if current_user.image_filename %}
+            {% if 'http' in current_user.image_filename %}
+                <img src="{{ current_user.image_filename }}" class="sidebar-profile-img" alt="Profile">
+            {% else %}
+                <img src="{{ url_for('static', filename='profile_pics/' + current_user.image_filename) }}" class="sidebar-profile-img" alt="Profile">
+            {% endif %}
+        {% else %}
+            <img src="https://ui-avatars.com/api/?name={{ current_user.username }}&background=0D8ABC&color=fff&size=128" class="sidebar-profile-img" alt="Profile">
+        {% endif %}
+        
+        <h5 class="fw-bold mb-0">{{ current_user.username }}</h5>
+        <small class="text-muted" style="font-size: 0.8rem;">Owner Account</small>
+    </div>
+
+    <hr>
+    
+    <h6 class="text-muted text-uppercase small ps-2 mb-3">Management</h6>
+
+    <ul class="nav flex-column nav-pills gap-1">
+        <li class="nav-item"><a class="nav-link active" href="#dashboard" data-bs-toggle="tab"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="#birthdays" data-bs-toggle="tab"><i class="bi bi-cake2-fill"></i> Birthdays</a></li>
+        <li class="nav-item"><a class="nav-link" href="#menu" data-bs-toggle="tab"><i class="bi bi-journal-text"></i> Manage Menu</a></li>
+        <li class="nav-item"><a class="nav-link" href="#users" data-bs-toggle="tab"><i class="bi bi-people-fill"></i> Users</a></li>
+        <li class="nav-item"><a class="nav-link" href="#leave" data-bs-toggle="tab"><i class="bi bi-calendar-check"></i> Leave Requests</a></li>
+        <li class="nav-item"><a class="nav-link" href="#requests" data-bs-toggle="tab"><i class="bi bi-lightbulb-fill"></i> Meal Requests</a></li>
+        <li class="nav-item"><a class="nav-link" href="#feedback" data-bs-toggle="tab"><i class="bi bi-chat-quote-fill"></i> Feedback</a></li>
+        <li class="nav-item"><a class="nav-link" href="#notify" data-bs-toggle="tab"><i class="bi bi-megaphone-fill"></i> Notify</a></li>
+        <li class="nav-item"><a class="nav-link btn btn-outline-primary text-start" href="{{ url_for('main.scanner') }}" target="_blank"><i class="bi bi-qr-code-scan"></i> Open Scanner</a></li>
+    </ul>
+</div>
+
+<main class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mess-title-gradient mb-0">Bachelor's Kitchen</h3>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-white shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Update Profile
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+                <li><a class="dropdown-item" href="{{ url_for('main.update_profile') }}">Edit Details</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="{{ url_for('main.logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for c, m in messages %}<div class="alert alert-{{ c }} shadow-sm">{{ m }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="dashboard">
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card stat-card bg-gradient-blue shadow">
+                        <div class="card-body">
+                            <h5 class="card-title opacity-75">Total Users</h5>
+                            <h2>{{ stats_users }}</h2>
+                            <i class="bi bi-people-fill icon-bg"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card bg-gradient-orange shadow">
+                        <div class="card-body">
+                            <h5 class="card-title opacity-75">Meals Served</h5>
+                            <h2>{{ stats_meals }}</h2>
+                            <i class="bi bi-egg-fried icon-bg"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card bg-gradient-green shadow">
+                        <div class="card-body">
+                            <h5 class="card-title opacity-75">Est. Revenue</h5>
+                            <h2>₹{{ stats_revenue }}</h2>
+                            <i class="bi bi-wallet2 icon-bg"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card bg-gradient-red shadow">
+                        <div class="card-body">
+                            <h5 class="card-title opacity-75">Pending Leave</h5>
+                            <h2>{{ pending_leave_requests|length }}</h2>
+                            <i class="bi bi-calendar-x icon-bg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">Overview</div>
+                        <div class="card-body d-flex justify-content-center align-items-center">
+                            <div class="chart-container">
+                                <canvas id="messChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">Meal Request Status</div>
+                        <div class="card-body d-flex justify-content-center align-items-center">
+                            <div class="chart-container">
+                                <canvas id="mealReqChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">Leave Request Status</div>
+                        <div class="card-body d-flex justify-content-center align-items-center">
+                            <div class="chart-container">
+                                <canvas id="leaveChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="birthdays">
+            <div class="card shadow-sm p-4">
+                <h4 class="mb-4 text-primary"><i class="bi bi-cake2-fill me-2"></i>Upcoming Birthdays</h4>
+                {% if birthday_list %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>User</th>
+                                    <th>Birth Date</th>
+                                    <th>Turning</th>
+                                    <th>Days Until</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for person in birthday_list %}
+                                <tr>
+                                    <td class="fw-bold">{{ person.username }}</td>
+                                    <td>{{ person.date_of_birth.strftime('%d %B') }}</td>
+                                    <td>
+                                        {% set age = current_date.year - person.date_of_birth.year %}
+                                        {{ age if person.days_until > 0 else age + 1 }}
+                                    </td>
+                                    <td>
+                                        {% if person.days_until == 0 %}
+                                            <span class="badge bg-danger">Today!</span>
+                                        {% elif person.days_until == 1 %}
+                                            <span class="badge bg-warning text-dark">Tomorrow</span>
+                                        {% else %}
+                                            <span class="badge bg-info text-dark">{{ person.days_until }} Days</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted fs-5">No birthdays in the next 5 days.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="menu">
+            <div class="card shadow-sm p-4">
+                <h4 class="mb-4">Update Menu</h4>
+                <form method="POST" action="{{ url_for('main.update_menu') }}" class="row g-3 mb-4 p-3 bg-light rounded">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="col-md-2">
+                        <select name="day" class="form-select border-0 shadow-sm">
+                            <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+                            <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4"><input name="lunch" class="form-control border-0 shadow-sm" placeholder="Lunch Item" required></div>
+                    <div class="col-md-4"><input name="dinner" class="form-control border-0 shadow-sm" placeholder="Dinner Item" required></div>
+                    <div class="col-md-2"><button class="btn btn-primary w-100 shadow-sm">Update</button></div>
+                </form>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light"><tr><th>Day</th><th>Lunch</th><th>Dinner</th></tr></thead>
+                    <tbody>{% for item in weekly_menu %}<tr><td class="fw-bold">{{item.day}}</td><td>{{item.lunch}}</td><td>{{item.dinner}}</td></tr>{% endfor %}</tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="users">
+            <div class="card shadow-sm p-4">
+                <div class="d-flex justify-content-between mb-3">
+                    <h4>Registered Users</h4>
+                    <form class="d-flex"><input name="q" class="form-control me-2" placeholder="Search ID/Name"><button class="btn btn-outline-primary">Search</button></form>
+                </div>
+                <table class="table table-hover">
+                    <thead class="table-light"><tr><th>User</th><th>Unique ID</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for u in all_users %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width:35px;height:35px;">{{ u.username[0]|upper }}</div>
+                                    <div><strong>{{ u.username }}</strong><br><small class="text-muted">{{ u.email }}</small></div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ u.unique_id }}</span></td>
+                            <td><a href="{{ url_for('main.view_user', user_id=u.id) }}" class="btn btn-sm btn-outline-info">View History</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="leave">
+            <div class="card shadow-sm p-4">
+                <h4 class="mb-4">Leave Requests</h4>
+                {% for req in pending_leave_requests %}
+                <div class="card mb-2 border-start border-4 border-warning">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">{{ req.user.username }}</h6>
+                            <small class="text-muted">{{ req.days }} days starting {{ req.start_date }}</small>
+                            <p class="mb-0 small fst-italic">"{{ req.reason }}"</p>
+                        </div>
+                        <form method="POST" action="{{ url_for('main.process_leave', request_id=req.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            
+                            <button name="action" value="approve" class="btn btn-success btn-sm me-1"><i class="bi bi-check-lg"></i></button>
+                            <button name="action" value="reject" class="btn btn-danger btn-sm"><i class="bi bi-x-lg"></i></button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-check-circle display-4"></i><p>All caught up!</p></div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="requests">
+             <div class="card shadow-sm p-4">
+                <h4>Meal Requests</h4>
+                <table class="table mt-3">
+                    <thead class="table-light"><tr><th>User</th><th>Request</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                    {% for r in all_meal_requests %}
+                        <tr>
+                            <td>{{ r.user.username }}</td>
+                            <td>{{ r.content }}</td>
+                            <td><span class="badge bg-{{ 'success' if r.status=='Approved' else 'danger' if r.status=='Rejected' else 'warning' }}">{{ r.status }}</span></td>
+                            <td>
+                                {% if r.status == 'Pending' %}
+                                <form method="POST" action="{{ url_for('main.process_meal_request', request_id=r.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    
+                                    <button name="action" value="approve" class="btn btn-sm btn-success">✓</button>
+                                    <button name="action" value="reject" class="btn btn-sm btn-danger">✕</button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+             </div>
+        </div>
+
+        <div class="tab-pane fade" id="feedback">
+            <div class="card shadow-sm p-4">
+                <h4>Feedback</h4>
+                {% for f in feedbacks %}
+                    <div class="d-flex border-bottom py-3">
+                        <div class="me-3"><i class="bi bi-chat-quote fs-3 text-secondary"></i></div>
+                        <div>
+                            <h6 class="mb-0">{{ f.user.username }} <small class="text-muted ms-2">{{ f.date.strftime('%d %b') }}</small></h6>
+                            <p class="mb-0">{{ f.content }}</p>
+                        </div>
+                    </div>
+                {% else %}<p>No feedback.</p>{% endfor %}
+            </div>
+        </div>
+        <div class="tab-pane fade" id="notify">
+            <div class="card shadow-sm p-4">
+                <h4>Broadcast Notification</h4>
+                <form method="POST" action="{{ url_for('main.send_notification') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <input name="title" class="form-control mb-3" placeholder="Notification Title" required>
+                    <textarea name="message" class="form-control mb-3" rows="3" placeholder="Message content..." required></textarea>
+                    <select name="to_user_id" class="form-select mb-3"><option value="">Send to All Users</option>{% for u in all_users %}<option value="{{u.id}}">{{u.username}}</option>{% endfor %}</select>
+                    <button class="btn btn-primary px-4">Send Broadcast</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- Data Processing for Charts ---
+    
+    // 1. General Stats (Safe Number conversion)
+    var statsUsers = Number("{{ stats_users }}");
+    var statsMeals = Number("{{ stats_meals }}");
+
+    // 2. Meal Requests Analysis
+    // We render the list as a JSON string and parse it in JS to avoid syntax errors
+    var requestsData = JSON.parse('{{ all_meal_requests | map(attribute="status") | list | tojson | safe }}');
+    
+    var mealApprove = requestsData.filter(function(s) { return s === 'Approved'; }).length;
+    var mealReject = requestsData.filter(function(s) { return s === 'Rejected'; }).length;
+    var mealPending = requestsData.filter(function(s) { return s === 'Pending'; }).length;
+
+    // 3. Leave Requests Analysis (Safe Parsing Logic)
+    var leaveData = JSON.parse('{{ all_leave_requests | default([]) | map(attribute="status") | list | tojson | safe }}');
+
+    var leaveApprove = leaveData.filter(function(s) { return s === 'Approved'; }).length;
+    var leaveReject = leaveData.filter(function(s) { return s === 'Rejected'; }).length;
+    var leavePendingCount = leaveData.filter(function(s) { return s === 'Pending'; }).length;
+
+    // Fallback if historical data isn't passed
+    if (leaveData.length === 0) {
+        leavePendingCount = Number("{{ pending_leave_requests|length }}");
+    }
+
+    // --- Chart 1: Users vs Meals ---
+    const ctx1 = document.getElementById('messChart');
+    if (ctx1) {
+        new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: ['Total Users', 'Meals Served'],
+                datasets: [{
+                    data: [statsUsers, statsMeals],
+                    backgroundColor: ['#0d6efd', '#fd7e14'],
+                    borderWidth: 1
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+        });
+    }
+
+    // --- Chart 2: Meal Request Status ---
+    const ctx2 = document.getElementById('mealReqChart');
+    if (ctx2) {
+        new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: ['Approved', 'Rejected', 'Pending'],
+                datasets: [{
+                    data: [mealApprove, mealReject, mealPending],
+                    backgroundColor: ['#198754', '#dc3545', '#ffc107'],
+                    borderWidth: 1
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+        });
+    }
+
+    // --- Chart 3: Leave Request Status ---
+    const ctx3 = document.getElementById('leaveChart');
+    if (ctx3) {
+        new Chart(ctx3, {
+            type: 'doughnut',
+            data: {
+                labels: ['Approved', 'Rejected', 'Pending'],
+                datasets: [{
+                    data: [leaveApprove, leaveReject, leavePendingCount], 
+                    backgroundColor: ['#198754', '#dc3545', '#ffc107'],
+                    borderWidth: 1
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+        });
+    }
+</script>
+{% endblock %}

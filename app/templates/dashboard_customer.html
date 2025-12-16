@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* 1. Minimized Credit Card (Approx 75% of original size) */
+    .credit-card-bg {
+        background: linear-gradient(135deg, #0d6efd, #0a58ca);
+        color: white;
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+        padding: 1rem;
+        box-shadow: 0 4px 10px rgba(13, 110, 253, 0.25);
+    }
+    .credit-card-bg::after {
+        content: '';
+        position: absolute;
+        top: -25px; right: -25px;
+        width: 80px; height: 80px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    .card-label { font-size: 0.7rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
+    .balance-amount { font-size: 1.6rem; font-weight: 700; margin: 0.2rem 0; }
+    
+    /* 2. Decorated Navigation Buttons */
+    .nav-pills .nav-link {
+        color: #495057;
+        font-weight: 500;
+        padding: 10px 15px;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        margin-bottom: 5px;
+        border: 1px solid transparent;
+    }
+    .nav-pills .nav-link:hover {
+        background-color: #f8f9fa;
+        color: #0d6efd;
+        border-color: #e9ecef;
+        transform: translateX(5px);
+    }
+    .nav-pills .nav-link.active {
+        background: linear-gradient(45deg, #0d6efd, #0a58ca);
+        color: white;
+        box-shadow: 0 4px 6px rgba(13, 110, 253, 0.3);
+        border-color: transparent;
+    }
+    .nav-pills .nav-link i {
+        font-size: 1.1rem;
+        margin-right: 10px;
+        vertical-align: middle;
+    }
+
+    /* Profile Image Style */
+    .profile-section {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+    .sidebar-profile-img {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #e9ecef;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        margin-bottom: 10px;
+    }
+
+    /* Attractive Title Style */
+    .mess-title-gradient {
+        background: -webkit-linear-gradient(45deg, #0d6efd, #0dcaf0);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: 'Lobster', cursive;
+        font-size: 2rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+
+<div class="sidebar">
+    <div class="profile-section">
+        {% if current_user.image_filename %}
+            {% if 'http' in current_user.image_filename %}
+                <img src="{{ current_user.image_filename }}" class="sidebar-profile-img" alt="Profile">
+            {% else %}
+                <img src="{{ url_for('static', filename='profile_pics/' + current_user.image_filename) }}" class="sidebar-profile-img" alt="Profile">
+            {% endif %}
+        {% else %}
+            <img src="https://ui-avatars.com/api/?name={{ current_user.username }}&background=random&size=128" class="sidebar-profile-img" alt="Profile">
+        {% endif %}
+        
+        <h5 class="fw-bold mb-0">{{ current_user.username }}</h5>
+        <small class="text-muted" style="font-size: 0.8rem;">{{ current_user.unique_id }}</small>
+    </div>
+
+    <hr>
+    
+    <h6 class="text-muted text-uppercase small ps-2 mb-3">Menu</h6>
+    
+    <ul class="nav flex-column nav-pills">
+        <li class="nav-item"><a class="nav-link active" href="#dashboard" data-bs-toggle="tab"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="#attendance" data-bs-toggle="tab"><i class="bi bi-clock-history"></i> Attendance</a></li>
+        <li class="nav-item"><a class="nav-link" href="#menu" data-bs-toggle="tab"><i class="bi bi-journal-text"></i> Weekly Menu</a></li>
+        <li class="nav-item"><a class="nav-link" href="#notify" data-bs-toggle="tab"><i class="bi bi-bell-fill"></i> Notifications</a></li>
+        <li class="nav-item"><a class="nav-link" href="#requests" data-bs-toggle="tab"><i class="bi bi-lightbulb"></i> Meal Requests</a></li>
+        <li class="nav-item"><a class="nav-link" href="#feedback" data-bs-toggle="tab"><i class="bi bi-chat-text"></i> Feedback</a></li>
+        <li class="nav-item"><a class="nav-link" href="#leave" data-bs-toggle="tab"><i class="bi bi-calendar-x"></i> Leave</a></li>
+        <li class="nav-item"><a class="nav-link" href="#qr" data-bs-toggle="tab"><i class="bi bi-qr-code"></i> My QR</a></li>
+    </ul>
+</div>
+
+<main class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mess-title-gradient mb-0">Bachelor's Kitchen</h3>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-white shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Update Profile
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+                <li><a class="dropdown-item" href="{{ url_for('main.update_profile') }}">Edit Details</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="{{ url_for('main.logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for c, m in messages %}<div class="alert alert-{{ c }} shadow-sm">{{ m }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="dashboard">
+            <div class="row g-4">
+                
+                <div class="col-md-4">
+                    <div class="card credit-card-bg border-0 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="card-label">Balance</span>
+                            <i class="bi bi-wallet2" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div class="balance-amount">₹{{ sub_balance }}</div>
+                        <div class="d-flex justify-content-between align-items-end mt-1">
+                            <div>
+                                <span class="card-label d-block">Status</span>
+                                {% if sub and sub.is_active and sub.end_date >= current_date %}
+                                    <span class="badge bg-light text-primary" style="font-size: 0.7rem;">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger" style="font-size: 0.7rem;">Inactive</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                <span class="card-label d-block">Days Left</span>
+                                <span class="fw-bold" style="font-size: 0.9rem;">{{ days_remaining }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('main.purchase_subscription') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if sub and sub.is_active and sub.end_date >= current_date %}
+                            <button class="btn btn-sm btn-outline-secondary w-100 disabled" disabled>Plan Active (Ends {{ sub.end_date }})</button>
+                        {% else %}
+                            <button class="btn btn-sm btn-primary w-100 shadow-sm">Renew Subscription</button>
+                        {% endif %}
+                    </form>
+                </div>
+                
+                <div class="col-md-8">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-5">
+                            <h2 class="text-primary fw-bold">Welcome back, {{ current_user.username }}!</h2>
+                            <p class="text-muted">Check the menu for today's special or scan your QR code to grab your meal.</p>
+                            <a href="#menu" data-bs-toggle="tab" class="btn btn-outline-primary mt-3">View Today's Menu</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="attendance">
+            <div class="card shadow-sm p-4">
+                <h4 class="mb-3">Attendance History</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" style="width: 30%;">Date</th>
+                                <th scope="col" style="width: 30%;">Time</th>
+                                <th scope="col" style="width: 40%;">Meal Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in attendance %}
+                            {% set date_str = to_ist(a.timestamp) %}
+                            {% set parts = date_str.split(' ') %}
+                            <tr>
+                                <td class="fw-medium">{{ parts[0] }} {{ parts[1] }} {{ parts[2] }}</td>
+                                <td class="text-muted">{{ parts[3] if parts|length > 3 else '' }}</td>
+                                <td>
+                                    {% if a.meal_type == 'Lunch' %}
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-sun-fill me-1"></i> Lunch</span>
+                                    {% else %}
+                                        <span class="badge bg-primary"><i class="bi bi-moon-stars-fill me-1"></i> Dinner</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center text-muted py-3">No attendance records found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="menu">
+            <div class="card shadow-sm p-4">
+                <h4 class="mb-4 text-center">Weekly Menu</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center">
+                        <thead class="bg-dark text-white"><tr><th>Day</th><th>Lunch</th><th>Dinner</th></tr></thead>
+                        <tbody>
+                            {% for item in weekly_menu %}
+                            <tr>
+                                <td class="fw-bold bg-light">{{ item.day }}</td>
+                                <td>{{ item.lunch }}</td>
+                                <td>{{ item.dinner }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="notify">
+            <div class="card shadow-sm p-4">
+                <h4 class="mb-4">Notifications</h4>
+                {% for n in notifications %}
+                    <div class="alert alert-light border shadow-sm mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-bell-fill text-primary me-3 fs-4"></i>
+                            <div>
+                                <h6 class="mb-1 fw-bold">{{ n.title }}</h6>
+                                <p class="mb-0 text-muted">{{ n.message }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-bell-slash fs-1"></i>
+                        <p class="mt-2">No new notifications</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="requests">
+            <div class="card shadow-sm p-4">
+                <h4>Request a Special Meal</h4>
+                <form method="POST" action="{{ url_for('main.request_meal') }}" class="mt-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-floating mb-3">
+                        <textarea name="content" class="form-control" id="mealReq" style="height: 100px" required></textarea>
+                        <label for="mealReq">What do you want to eat?</label>
+                    </div>
+                    <button class="btn btn-primary px-4">Submit Request</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="feedback">
+            <div class="card shadow-sm p-4">
+                <h4>Feedback</h4>
+                <form method="POST" action="{{ url_for('main.submit_feedback') }}" class="mt-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-floating mb-3">
+                        <textarea name="content" class="form-control" id="feedText" style="height: 100px" required></textarea>
+                        <label for="feedText">Your experience...</label>
+                    </div>
+                    <button class="btn btn-success px-4">Send Feedback</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="leave">
+             <div class="card shadow-sm p-4">
+                 <h4>Leave Management</h4>
+                 <form method="POST" action="{{ url_for('main.request_leave') }}" class="row g-3 mt-2 bg-light p-3 rounded">
+                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                     <div class="col-md-5"><label>Start Date</label><input name="start_date" type="date" class="form-control" required></div>
+                     <div class="col-md-3"><label>Days</label><input name="days" type="number" class="form-control" min="1" required></div>
+                     <div class="col-md-4"><label>&nbsp;</label><button class="btn btn-primary w-100 d-block">Request Leave</button></div>
+                     <div class="col-12"><input name="reason" class="form-control" placeholder="Reason (Optional)"></div>
+                 </form>
+                 
+                 <h5 class="mt-4">History</h5>
+                 <ul class="list-group list-group-flush">
+                     {% for req in leave_requests %}
+                     <li class="list-group-item d-flex justify-content-between">
+                         <span>{{ req.start_date }} ({{ req.days }} days)</span>
+                         <span class="badge bg-{{ 'success' if req.status=='Approved' else 'warning' if req.status=='Pending' else 'danger' }}">{{ req.status }}</span>
+                     </li>
+                     {% else %}<li class="list-group-item">No history.</li>{% endfor %}
+                 </ul>
+             </div>
+        </div>
+        
+        <div class="tab-pane fade" id="qr">
+            <div class="d-flex justify-content-center">
+                <div class="card shadow p-4 text-center border-0" style="max-width: 350px;">
+                    <h4 class="fw-bold mb-3">MESS ENTRY PASS</h4>
+                    <div class="bg-light p-3 rounded border">
+                        <img src="{{ url_for('main.user_qr', user_id=current_user.id) }}" alt="QR Code" class="img-fluid">
+                    </div>
+                    <p class="mt-3 text-muted">Show this QR code at the counter.</p>
+                    <div class="badge bg-dark fs-6">{{ current_user.unique_id }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-center py-5 w-100">
+    <div class="col-md-6">
+        <div class="card p-5 border-0 shadow-sm">
+            <h1 class="mess-name text-center mb-4">Create Account</h1>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}{% for c, m in messages %}<div class="alert alert-{{ c }}">{{ m }}</div>{% endfor %}{% endif %}
+            {% endwith %}
+            <form method="POST" enctype="multipart/form-data">
+                <div class="row g-2 mb-2">
+                    <div class="col-md-4"><input name="username" class="form-control" placeholder="Username" required></div>
+                    <div class="col-md-4"><input name="email" class="form-control" type="email" placeholder="Email" required></div>
+                    <div class="col-md-4"><input name="dob" class="form-control" type="date" required></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-md-6"><input name="password" type="password" class="form-control" placeholder="Password" required></div>
+                    <div class="col-md-6">
+                        <select name="gender" class="form-select" required>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3"><label>Profile Photo</label><input name="image" type="file" class="form-control"></div>
+                <div class="mb-3"><input name="admin_code" type="password" class="form-control" placeholder="Admin Code (Optional)"></div>
+                <button class="btn btn-primary w-100">Register</button>
+            </form>
+            <div class="text-center mt-3"><a href="{{ url_for('main.login') }}">Already have an account? Login</a></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
