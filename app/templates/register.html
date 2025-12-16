@@ -1,32 +1,68 @@
 {% extends "base.html" %}
+
+{% block title %}Register - Bachelor's Kitchen{% endblock %}
+
 {% block content %}
-<div class="d-flex align-items-center justify-content-center py-5 w-100">
+<div class="d-flex align-items-center justify-content-center py-5 w-100" style="min-height: 100vh;">
     <div class="col-md-6">
-        <div class="card p-5 border-0 shadow-sm">
-            <h1 class="mess-name text-center mb-4">Create Account</h1>
+        <div class="card p-5 border-0 shadow-sm" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
+            <h1 class="mess-name text-center mb-4" style="font-family: 'Lobster', cursive; color: #0d6efd; font-size: 2.5rem;">Create Account</h1>
+            
             {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}{% for c, m in messages %}<div class="alert alert-{{ c }}">{{ m }}</div>{% endfor %}{% endif %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
             {% endwith %}
+
             <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <div class="row g-2 mb-2">
-                    <div class="col-md-4"><input name="username" class="form-control" placeholder="Username" required></div>
-                    <div class="col-md-4"><input name="email" class="form-control" type="email" placeholder="Email" required></div>
-                    <div class="col-md-4"><input name="dob" class="form-control" type="date" required></div>
+                    <div class="col-md-4">
+                        <input name="username" class="form-control" placeholder="Username" required>
+                    </div>
+                    <div class="col-md-4">
+                        <input name="email" class="form-control" type="email" placeholder="Email" required>
+                    </div>
+                    <div class="col-md-4">
+                        <input name="dob" class="form-control" type="date" required title="Date of Birth">
+                    </div>
                 </div>
+
                 <div class="row g-2 mb-2">
-                    <div class="col-md-6"><input name="password" type="password" class="form-control" placeholder="Password" required></div>
+                    <div class="col-md-6">
+                        <input name="password" type="password" class="form-control" placeholder="Password" required>
+                    </div>
                     <div class="col-md-6">
                         <select name="gender" class="form-select" required>
+                            <option value="" disabled selected>Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
                 </div>
-                <div class="mb-3"><label>Profile Photo</label><input name="image" type="file" class="form-control"></div>
-                <div class="mb-3"><input name="admin_code" type="password" class="form-control" placeholder="Admin Code (Optional)"></div>
-                <button class="btn btn-primary w-100">Register</button>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Profile Photo</label>
+                    <input name="image" type="file" class="form-control" accept="image/*">
+                </div>
+
+                <div class="mb-3">
+                    <input name="admin_code" type="password" class="form-control" placeholder="Admin Code (Optional)">
+                </div>
+
+                <button class="btn btn-primary w-100 py-2 fw-bold shadow-sm">Register</button>
             </form>
-            <div class="text-center mt-3"><a href="{{ url_for('main.login') }}">Already have an account? Login</a></div>
+            
+            <div class="text-center mt-3">
+                <a href="{{ url_for('main.login') }}" class="text-decoration-none">Already have an account? Login</a>
+            </div>
         </div>
     </div>
 </div>
