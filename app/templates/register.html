@@ -34,16 +34,25 @@
                     </div>
                 </div>
 
-                <div class="row g-2 mb-2">
-                    <div class="col-md-6">
-                        <input name="password" type="password" class="form-control" placeholder="Password" required>
-                    </div>
+                <div class="mb-2">
+                    <input name="password" type="password" class="form-control" placeholder="Password" required>
+                </div>
+
+                <div class="row g-2 mb-3">
                     <div class="col-md-6">
                         <select name="gender" class="form-select" required>
                             <option value="" disabled selected>Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
                             <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <select name="mess_type" class="form-select" required>
+                            <option value="" disabled>Select Mess Plan</option>
+                            <option value="Two Time" selected>Two Time (Lunch & Dinner)</option>
+                            <option value="One Time">One Time (Any 1 Meal/Day)</option>
                         </select>
                     </div>
                 </div>

@@ -17,12 +17,18 @@ class User(UserMixin, db.Model):
     image_filename = db.Column(db.String(200), nullable=True)
     date_of_birth = db.Column(db.Date, nullable=True)
 
+    # --- NEW COLUMNS (Added for One Time/Two Time Logic) ---
+    mess_type = db.Column(db.String(20), default='Two Time')  # Stores 'One Time' or 'Two Time'
+    monthly_charge = db.Column(db.Float, default=2800.0)      # Stores the plan price (1500 or 2800)
+    cost_per_meal = db.Column(db.Float, default=0.0)          # Calculated cost per plate
+    balance = db.Column(db.Float, default=0.0)                # Main wallet balance for the user
+
 class Subscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
-    balance = db.Column(db.Float, default=2800.0)
+    balance = db.Column(db.Float, default=2800.0) # (Legacy field, we are now using User.balance mostly)
     is_active = db.Column(db.Boolean, default=True)
     user = db.relationship('User', backref='subscription')
 

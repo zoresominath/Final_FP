@@ -11,14 +11,11 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 
 from .extensions import db
 from .models import User, Subscription, Attendance, WeeklyMenu, Feedback, Notification, MealRequest, LeaveRequest, Payment
-# Added upload_file to imports
 from .utils import is_valid_username, is_strong_password, generate_unique_id, utc_to_ist_str, send_email, upload_file
+# Note: We import Config to access the prices directly if needed, or use current_app.config
+from config import Config
 
 bp = Blueprint('main', __name__)
-
-# Constants
-MALE_MEAL_COST = round(2800.0 / 60.0, 2)
-FEMALE_MEAL_COST = round(2400.0 / 60.0, 2)
 
 def get_serializer():
     return URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
@@ -37,6 +34,7 @@ def home():
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect(url_for('main.dashboard'))
+    
     if request.method == 'POST':
         username = request.form['username'].strip()
         email = request.form['email'].strip().lower()
@@ -44,34 +42,80 @@ def register():
         password_raw = request.form['password']
         form_admin_code = request.form.get('admin_code', '').strip()
         
+        # Determine Role
         user_type = 'owner' if form_admin_code == current_app.config.get('SECRET_ADMIN_CODE') else 'customer'
-        gender = request.form.get('gender', 'Male')
-
-        if not is_valid_username(username): flash('Invalid username.', 'danger'); return redirect(url_for('main.register'))
-        if not is_strong_password(password_raw): flash('Weak password.', 'danger'); return redirect(url_for('main.register'))
-        if User.query.filter_by(username=username).first(): flash('Username taken.', 'danger'); return redirect(url_for('main.register'))
         
-        # Check if owner exists
-        if user_type == 'owner' and User.query.filter_by(user_type='owner').first():
-            flash('Owner already exists.', 'danger'); return redirect(url_for('main.register'))
+        # Get Gender & Mess Type
+        gender = request.form.get('gender', 'Male')
+        mess_type = request.form.get('mess_type', 'Two Time') # Default to Two Time
 
-        # Handle Image Upload (Cloudinary)
+        # --- VALIDATION ---
+        if not is_valid_username(username): 
+            flash('Invalid username. Use letters and numbers only.', 'danger')
+            return redirect(url_for('main.register'))
+        
+        if not is_strong_password(password_raw): 
+            flash('Weak password. Must be 8+ chars.', 'danger')
+            return redirect(url_for('main.register'))
+        
+        if User.query.filter_by(username=username).first(): 
+            flash('Username taken.', 'danger')
+            return redirect(url_for('main.register'))
+        
+        if user_type == 'owner' and User.query.filter_by(user_type='owner').first():
+            flash('Owner already exists.', 'danger')
+            return redirect(url_for('main.register'))
+
+        # --- PRICING LOGIC ---
+        # Determine monthly charge based on Plan + Gender
+        if mess_type == 'One Time':
+            if gender == 'Male':
+                monthly_charge = Config.MALE_ONE_TIME
+            else:
+                monthly_charge = Config.FEMALE_ONE_TIME
+            # 1 meal per day * 30 days = 30 meals
+            cost_per_meal = monthly_charge / 30.0
+            
+        else: # Two Time (Standard)
+            if gender == 'Male':
+                monthly_charge = Config.MALE_MONTHLY
+            else:
+                monthly_charge = Config.FEMALE_MONTHLY
+            # 2 meals per day * 30 days = 60 meals
+            cost_per_meal = monthly_charge / 60.0
+
+        # --- IMAGE UPLOAD ---
         image_url = None
         file = request.files.get('image')
         if file and file.filename:
-            # Upload to Cloudinary and get the URL
             image_url = upload_file(file)
 
         dob = datetime.strptime(dob_raw, "%Y-%m-%d").date() if dob_raw else None
         unique_id = generate_unique_id()
         
-        # Note: We save the Cloudinary URL into 'image_filename'
-        u = User(username=username, email=email, password=generate_password_hash(password_raw),
-                 user_type=user_type, gender=gender, image_filename=image_url, date_of_birth=dob, unique_id=unique_id)
+        # --- CREATE USER ---
+        u = User(
+            username=username, 
+            email=email, 
+            password=generate_password_hash(password_raw),
+            user_type=user_type, 
+            gender=gender, 
+            image_filename=image_url, 
+            date_of_birth=dob, 
+            unique_id=unique_id,
+            # New Fields
+            mess_type=mess_type,
+            monthly_charge=monthly_charge,
+            cost_per_meal=cost_per_meal,
+            balance=0.0
+        )
+        
         db.session.add(u)
         db.session.commit()
+        
         flash('Registration successful. Please login.', 'success')
         return redirect(url_for('main.login'))
+        
     return render_template('register.html')
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -101,9 +145,10 @@ def dashboard():
         # Stats
         stats_users = User.query.filter(User.user_type == 'customer').count()
         stats_meals = Attendance.query.count()
-        total_rev = sum([2400.0 if s.user.gender == 'Female' else 2800.0 for s in Subscription.query.all() if s.user])
         
-        # Pass all_leave_requests explicitly for the chart logic
+        # Calculate revenue based on actual user monthly charges
+        total_rev = sum([s.user.monthly_charge for s in Subscription.query.all() if s.user])
+        
         all_leave_requests = LeaveRequest.query.all()
         pending_leave = [req for req in all_leave_requests if req.status == 'Pending']
         
@@ -134,6 +179,7 @@ def dashboard():
     else:
         sub = Subscription.query.filter_by(user_id=current_user.id, is_active=True).first()
         days_remaining = (sub.end_date - current_date).days if sub and sub.end_date and sub.end_date >= current_date else 0
+        
         attendance = Attendance.query.filter_by(user_id=current_user.id).order_by(Attendance.timestamp.desc()).all()
         notifications = Notification.query.filter((Notification.to_user_id == None) | (Notification.to_user_id == current_user.id)).order_by(Notification.date.desc()).all()
         leave_requests = LeaveRequest.query.filter_by(user_id=current_user.id).all()
@@ -142,8 +188,9 @@ def dashboard():
         days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         weekly_menu = sorted(WeeklyMenu.query.all(), key=lambda x: days_order.index(x.day) if x.day in days_order else 99)
 
+        # Use current_user.balance instead of sub.balance
         return render_template('dashboard_customer.html', sub=sub, attendance=attendance, notifications=notifications,
-                               sub_balance=f"{sub.balance:,.2f}" if sub else '0.00', leave_requests=leave_requests,
+                               sub_balance=f"{current_user.balance:,.2f}", leave_requests=leave_requests,
                                weekly_menu=weekly_menu, days_remaining=days_remaining, payments=payments, current_date=current_date)
 
 @bp.route('/view_user/<int:user_id>')
@@ -164,7 +211,6 @@ def update_profile():
         if request.form.get('password'):
             u.password = generate_password_hash(request.form['password'])
         
-        # Handle Image Upload (Cloudinary)
         file = request.files.get('image')
         if file and file.filename:
             image_url = upload_file(file)
@@ -179,7 +225,6 @@ def update_profile():
 @bp.route('/delete_account', methods=['POST'])
 @login_required
 def delete_account():
-    # Only allow customers to delete their own account
     if current_user.user_type == 'owner':
         flash('Owners cannot delete their account directly.', 'danger')
         return redirect(url_for('main.dashboard'))
@@ -200,17 +245,24 @@ def delete_account():
 def purchase_subscription():
     start = date.today()
     end = start + timedelta(days=30)
-    cost = 2400.0 if current_user.gender == 'Female' else 2800.0
+    
+    # Use the dynamic price stored in the User profile
+    cost = current_user.monthly_charge 
     
     # Check existing
     s = Subscription.query.filter_by(user_id=current_user.id, is_active=True).first()
     if s and s.end_date >= start:
         flash('Active subscription exists.', 'warning')
     else:
-        db.session.add(Subscription(user_id=current_user.id, start_date=start, end_date=end, balance=cost))
+        # Create Subscription
+        db.session.add(Subscription(user_id=current_user.id, start_date=start, end_date=end, balance=0))
+        # Add Money to Wallet (User Balance)
+        current_user.balance += cost 
+        # Record Payment
         db.session.add(Payment(user_id=current_user.id, amount=cost))
+        
         db.session.commit()
-        flash('Purchased successfully.', 'success')
+        flash(f'Purchased successfully. {cost} added to balance.', 'success')
     return redirect(url_for('main.dashboard'))
 
 @bp.route('/scanner')
@@ -232,35 +284,53 @@ def user_qr(user_id):
 @login_required
 def scan_attendance():
     if current_user.user_type != 'owner': return jsonify({'success': False}), 403
+    
     data = request.get_json()
     uid_str = str(data.get('user_id')).upper()
     meal = data.get('meal_type')
     
+    # 1. Find User
     u = User.query.filter((User.unique_id == uid_str) | (User.id == int(uid_str) if uid_str.isdigit() else False)).first()
     if not u: return jsonify({'success': False, 'error': 'User not found'})
 
+    # 2. Check Subscription
     sub = Subscription.query.filter_by(user_id=u.id, is_active=True).first()
     if not sub or (sub.end_date and sub.end_date < date.today()):
         return jsonify({'success': False, 'error': 'Subscription expired'})
     
-    # Check duplicate
+    # 3. Check Daily Limit (One Time vs Two Time)
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    if Attendance.query.filter(Attendance.user_id==u.id, Attendance.meal_type==meal, Attendance.timestamp >= today_start).first():
-        return jsonify({'success': False, 'error': 'Already ate this meal'})
+    meals_eaten_today = Attendance.query.filter(Attendance.user_id==u.id, Attendance.timestamp >= today_start).count()
+    
+    limit = 1 if u.mess_type == 'One Time' else 2
+    
+    if meals_eaten_today >= limit:
+        return jsonify({'success': False, 'error': f'Daily limit reached! ({limit} meal/day)'})
 
-    # Cost
-    cost = FEMALE_MEAL_COST if u.gender == 'Female' else MALE_MEAL_COST
+    # 4. Check Duplicate for SAME meal type (e.g., Lunch twice)
+    # Although limit is 1 or 2, we still prevent scanning "Lunch" twice in a row if desired, 
+    # but strictly speaking, the count limit above handles the main restriction.
+    # We can keep this check to ensure they don't eat 'Lunch' twice if they are on a 2-meal plan.
+    if Attendance.query.filter(Attendance.user_id==u.id, Attendance.meal_type==meal, Attendance.timestamp >= today_start).first():
+        return jsonify({'success': False, 'error': f'Already ate {meal} today'})
+
+    # 5. Check Balance & Cost
+    cost = u.cost_per_meal
+    
     # Free if birthday
     is_bday = (u.date_of_birth and u.date_of_birth.month == date.today().month and u.date_of_birth.day == date.today().day)
+    
     if not is_bday:
-        if sub.balance < cost: return jsonify({'success': False, 'error': 'Low balance'})
-        sub.balance -= cost
+        if u.balance < cost: 
+            return jsonify({'success': False, 'error': f'Low balance! Need {cost}'})
+        u.balance -= cost
 
+    # 6. Save Attendance
     db.session.add(Attendance(user_id=u.id, meal_type=meal))
     db.session.commit()
     
     msg = "Happy Birthday! Meal is free." if is_bday else f"Marked for {u.username}"
-    return jsonify({'success': True, 'username': u.username, 'balance': f"{sub.balance:.2f}", 'message': msg})
+    return jsonify({'success': True, 'username': u.username, 'balance': f"{u.balance:.2f}", 'message': msg})
 
 @bp.route('/logout')
 @login_required
@@ -370,7 +440,6 @@ def process_meal_request(request_id):
     
     if action == 'approve':
         req.status = 'Approved'
-        # Optional: You could send a notification here
         db.session.add(Notification(to_user_id=req.user_id, title="Meal Request Update", message=f"Your request '{req.content}' has been APPROVED."))
         flash('Meal request approved.', 'success')
     elif action == 'reject':
