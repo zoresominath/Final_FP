@@ -1,12 +1,9 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Scanner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-<div class="container d-flex flex-column align-items-center justify-content-center min-vh-100">
+{% extends "base.html" %}
+
+{% block title %}Scanner - Bachelor's Kitchen{% endblock %}
+
+{% block content %}
+<div class="container d-flex flex-column align-items-center justify-content-center" style="min-height: 80vh;">
     <div class="card p-4 shadow-sm" style="width: 100%; max-width: 400px;">
         <h3 class="text-center mb-3">Attendance Scanner</h3>
         
@@ -24,21 +21,34 @@
     </div>
 </div>
 
+<script>
+    const csrfToken = "{{ csrf_token() }}";
+</script>
+
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
 <script>
     let lastScan = 0;
+    
     function onScanSuccess(decodedText) {
+        // Prevent double scanning (wait 3 seconds)
         if (Date.now() - lastScan < 3000) return;
         lastScan = Date.now();
         
         const meal = document.querySelector('input[name="meal"]:checked').value;
         const resultDiv = document.getElementById('result');
+        
+        // Show "Processing" state
         resultDiv.className = 'alert alert-info';
         resultDiv.textContent = 'Processing...';
 
-        fetch('/scan_attendance', {
+        // 2. SEND REQUEST WITH TOKEN
+        fetch("{{ url_for('main.scan_attendance') }}", {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken  // <--- THIS FIXES THE 400 ERROR
+            },
             body: JSON.stringify({ user_id: decodedText, meal_type: meal })
         })
         .then(res => res.json())
@@ -46,14 +56,22 @@
             if(data.success) {
                 resultDiv.className = 'alert alert-success';
                 resultDiv.innerHTML = `<strong>${data.message}</strong><br>Bal: ₹${data.balance}`;
+                // Optional: Play a beep sound
+                // new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3').play();
             } else {
                 resultDiv.className = 'alert alert-danger';
                 resultDiv.textContent = data.error;
             }
+        })
+        .catch(err => {
+            console.error(err);
+            resultDiv.className = 'alert alert-warning';
+            resultDiv.textContent = "Error connecting to server.";
         });
     }
+
+    // Initialize Scanner
     let html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
     html5QrcodeScanner.render(onScanSuccess);
 </script>
-</body>
-</html>
+{% endblock %}

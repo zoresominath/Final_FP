@@ -14,7 +14,7 @@ class Config:
         SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/mess_system.db'
     
     # 2. Check if a database URL is provided (e.g., Render/Postgres)
-    elif os.environ.get('DATABASE_URL'):
+    elif os.environ.get('postgresql://neondb_owner:npg_CiWyV6S0LkFa@ep-icy-moon-a17us036-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'):
         db_url = os.environ.get('DATABASE_URL')
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql://", 1)
