@@ -21,6 +21,8 @@ def upload_file(file_obj):
     Uploads a file to Cloudinary and returns the secure URL.
     Used for profile pictures on Vercel/Production.
     """
+    if not file_obj: return None
+    
     # Configure Cloudinary using keys from config.py
     cloudinary.config(
         cloud_name = current_app.config.get('CLOUDINARY_CLOUD_NAME'),
@@ -51,13 +53,39 @@ def is_strong_password(p):
     """Checks for length >=8, at least one letter, at least one number."""
     return len(p) >= 8 and re.search(r'[A-Za-z]', p) and re.search(r'\d', p)
 
+def generate_next_customer_id(last_id=None):
+    """
+    Generates the next ID in the sequence A1 -> A9999 -> B1 -> B9999...
+    If last_id is None, returns 'A1'.
+    """
+    if not last_id:
+        return 'A1'
+    
+    # Extract letter and number (e.g., 'A', '150')
+    match = re.match(r"([A-Z])(\d+)", last_id)
+    if not match:
+        # Fallback if the last ID doesn't match the pattern (e.g. old UUIDs)
+        return 'A1' 
+        
+    char_part = match.group(1)
+    num_part = int(match.group(2))
+    
+    if num_part < 9999:
+        # Just increment the number
+        return f"{char_part}{num_part + 1}"
+    else:
+        # Increment character and reset number to 1
+        next_char = chr(ord(char_part) + 1)
+        if next_char > 'Z':
+            raise ValueError("Max ID limit reached (Z9999)")
+        return f"{next_char}1"
+
 def generate_unique_id():
-    """Generates a short unique ID (e.g., A1B2C3D4) or falls back to timestamp."""
-    for _ in range(20):
-        candidate = uuid.uuid4().hex[:8].upper()
-        if not User.query.filter_by(unique_id=candidate).first():
-            return candidate
-    return f"U{int(datetime.utcnow().timestamp())}"
+    """
+    Legacy wrapper. In the new system, routes.py calls generate_next_customer_id explicitly.
+    This creates a fallback random ID if needed.
+    """
+    return uuid.uuid4().hex[:8].upper()
 
 def utc_to_ist_str(dt, fmt='%d %b, %Y %H:%M:%S'):
     """Converts a UTC datetime object to an IST string."""
@@ -85,7 +113,6 @@ def ensure_default_image():
             d.ellipse([50, 30, 150, 130], fill=(13, 110, 253))
             img.save(default_path)
     except Exception as e:
-        # Fail silently on read-only file systems (like Vercel)
         pass
 
 def send_email(to_email, subject, body):
@@ -128,15 +155,3 @@ def migrate_add_unique_id():
         print("Migration: Adding unique_id column...")
         with db.engine.connect() as conn:
             conn.execute(text('ALTER TABLE "user" ADD COLUMN unique_id TEXT;'))
-    
-    # Populate empty unique_ids for existing users
-    try:
-        users_without = User.query.filter(or_(User.unique_id == None, User.unique_id == '')).all()
-        if users_without:
-            print(f"Migrating {len(users_without)} users...")
-            for u in users_without:
-                u.unique_id = generate_unique_id()
-                db.session.add(u)
-            db.session.commit()
-    except Exception as e:
-        print(f"Migration Error: {e}")

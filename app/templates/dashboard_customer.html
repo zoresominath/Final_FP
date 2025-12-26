@@ -2,7 +2,7 @@
 
 {% block content %}
 <style>
-    /* 1. Minimized Credit Card (Approx 75% of original size) */
+    /* 1. Minimized Credit Card */
     .credit-card-bg {
         background: linear-gradient(135deg, #0d6efd, #0a58ca);
         color: white;
@@ -23,7 +23,7 @@
     .card-label { font-size: 0.7rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
     .balance-amount { font-size: 1.6rem; font-weight: 700; margin: 0.2rem 0; }
     
-    /* 2. Decorated Navigation Buttons */
+    /* 2. Floating Navigation Pills */
     .nav-pills .nav-link {
         color: #495057;
         font-weight: 500;
@@ -76,16 +76,76 @@
         font-size: 2rem;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
+
+    /* Pulse Animation */
+    .pulse-button { animation: pulse 2s infinite; }
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7); }
+        70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(0, 0, 0, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+    }
+
+    /* --- UPDATED: Compact & Attractive Welcome Card --- */
+    .welcome-card-bg {
+        /* Vibrant Gradient */
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+    }
+    .welcome-text {
+        font-weight: 700;
+        font-size: 1.6rem; /* Reduced size */
+        letter-spacing: 0.5px;
+    }
+    .wave-emoji {
+        display: inline-block;
+        animation: wave 2.5s infinite;
+        transform-origin: 70% 70%;
+    }
+    /* Subtle decorative circle behind text */
+    .welcome-card-bg::before {
+        content: '';
+        position: absolute;
+        bottom: -30px;
+        left: -30px;
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+    @keyframes wave {
+        0% { transform: rotate(0deg); }
+        10% { transform: rotate(14deg); }
+        20% { transform: rotate(-8deg); }
+        30% { transform: rotate(14deg); }
+        40% { transform: rotate(-4deg); }
+        50% { transform: rotate(10deg); }
+        60% { transform: rotate(0deg); }
+        100% { transform: rotate(0deg); }
+    }
+
+    /* Floating Action Button for Quick QR Access */
+    .fab-qr {
+        position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
+        border-radius: 50%; background: linear-gradient(135deg, #0d6efd, #0a58ca);
+        color: white; display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 8px 20px rgba(13, 110, 253, 0.4); font-size: 24px; z-index: 1050;
+        transition: all 0.3s ease; border: 2px solid white; text-decoration: none; cursor: pointer;
+    }
+    .fab-qr:hover { transform: scale(1.1); color: white; }
 </style>
+
+<a onclick="document.querySelector('a[href=\'#qr\']').click()" class="fab-qr" title="Show My QR">
+    <i class="bi bi-qr-code"></i>
+</a>
 
 <div class="sidebar">
     <div class="profile-section">
         {% if current_user.image_filename %}
-            {% if 'http' in current_user.image_filename %}
-                <img src="{{ current_user.image_filename }}" class="sidebar-profile-img" alt="Profile">
-            {% else %}
-                <img src="{{ url_for('static', filename='profile_pics/' + current_user.image_filename) }}" class="sidebar-profile-img" alt="Profile">
-            {% endif %}
+            <img src="{{ url_for('static', filename='profile_pics/' + current_user.image_filename) if 'http' not in current_user.image_filename else current_user.image_filename }}" class="sidebar-profile-img" alt="Profile">
         {% else %}
             <img src="https://ui-avatars.com/api/?name={{ current_user.username }}&background=random&size=128" class="sidebar-profile-img" alt="Profile">
         {% endif %}
@@ -158,25 +218,39 @@
                         </div>
                     </div>
                     
-                    <form method="POST" action="{{ url_for('main.purchase_subscription') }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        {% if sub and sub.is_active and sub.end_date >= current_date %}
-                            <button class="btn btn-sm btn-outline-secondary w-100 disabled" disabled>Plan Active (Ends {{ sub.end_date }})</button>
-                        {% else %}
-                            <button class="btn btn-sm btn-primary w-100 shadow-sm">Renew Subscription</button>
-                        {% endif %}
-                    </form>
+                    {% if sub and sub.is_active and sub.end_date >= current_date %}
+                         <button class="btn btn-sm btn-outline-secondary w-100 disabled" disabled>
+                             Plan Active (Ends {{ sub.end_date }})
+                         </button>
+                    {% else %}
+                         {% set pending = payments|selectattr("status", "equalto", "Pending")|list %}
+                         {% if pending %}
+                             <button class="btn btn-sm btn-warning w-100 disabled" disabled>
+                                 <i class="bi bi-hourglass-split"></i> Verification Pending...
+                             </button>
+                         {% else %}
+                             <a href="upi://pay?pa=zoresominath-2@okhdfcbank&pn=SominathZore&am={{ current_user.monthly_charge }}&cu=INR&tn=MessFee" 
+                                class="btn btn-sm btn-primary fw-bold w-100 shadow-sm mb-2 pulse-button">
+                                 <i class="bi bi-lightning-charge-fill"></i> Pay Now (Direct)
+                             </a>
+
+                             <button class="btn btn-sm btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#verifyModal">
+                                 <i class="bi bi-check-circle"></i> Enter Transaction ID
+                             </button>
+                         {% endif %}
+                    {% endif %}
                 </div>
                 
                 <div class="col-md-8">
-                    <div class="card shadow-sm border-0 h-100">
-                        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-5">
-                            <h2 class="text-primary fw-bold">Welcome back, {{ current_user.username }}!</h2>
-                            <p class="text-muted">Check the menu for today's special or scan your QR code to grab your meal.</p>
-                            <a href="#menu" data-bs-toggle="tab" class="btn btn-outline-primary mt-3">View Today's Menu</a>
+                    <div class="card welcome-card-bg shadow-sm h-100">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-4">
+                            <h2 class="welcome-text mb-0">
+                                Welcome back, {{ current_user.username }}! <span class="wave-emoji">👋</span>
+                            </h2>
                         </div>
                     </div>
                 </div>
+                
             </div>
         </div>
 
@@ -324,19 +398,48 @@
     </div>
 </main>
 
+<div class="modal fade" id="verifyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form action="{{ url_for('main.submit_payment') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">Confirm Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle-fill me-1"></i> 
+                        <strong>Step 1:</strong> Click "Pay Now" on the dashboard to pay via UPI.<br>
+                        <strong>Step 2:</strong> Copy the <strong>Transaction ID / UTR</strong> from your app.<br>
+                        <strong>Step 3:</strong> Paste it below to send approval request.
+                        <br><br>
+                        Paying manually? UPI ID: <span class="font-monospace text-dark user-select-all">zoresominath-2@okhdfcbank</span>
+                    </div>
+                    
+                    <div class="form-floating mb-3">
+                        <input type="text" name="transaction_id" class="form-control" id="transId" required placeholder="Ex: 33458XXXXXX">
+                        <label for="transId">Paste Transaction ID (UTR)</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success w-100">Send Approval Request</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         // Leave Request Date Restriction
         var today = new Date();
-        
-        // Format to YYYY-MM-DD
         var dd = String(today.getDate()).padStart(2, '0');
-        var mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
         var yyyy = today.getFullYear();
-        
         var minDate = yyyy + '-' + mm + '-' + dd;
         
-        // Find the start date input and set the min attribute
         var leaveInput = document.querySelector('input[name="start_date"]');
         if (leaveInput) {
             leaveInput.setAttribute("min", minDate);

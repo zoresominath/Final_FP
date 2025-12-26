@@ -83,4 +83,9 @@ class Payment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # --- NEW COLUMNS FOR MANUAL PAYMENTS ---
+    transaction_id = db.Column(db.String(100), nullable=True) # Stores the UTR/Ref Number
+    status = db.Column(db.String(20), default='Pending')      # Pending, Approved, Rejected
+    
     user = db.relationship('User', backref='payments')

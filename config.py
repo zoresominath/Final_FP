@@ -7,32 +7,36 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'a-hard-to-guess-secret-key')
     SECRET_ADMIN_CODE = os.environ.get('SECRET_ADMIN_CODE', "Pass@123")
 
-    # --- Database Configuration (FIXED FOR VERCEL) ---
-    # 1. Check if we are running on Vercel
-    if os.environ.get('VERCEL'):
-        # Vercel is Read-Only, so we MUST use the /tmp folder
-        SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/mess_system.db'
-    
-    # 2. Check if a database URL is provided (e.g., Render/Postgres)
-    elif os.environ.get('postgresql://neondb_owner:npg_CiWyV6S0LkFa@ep-icy-moon-a17us036-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'):
+    # --- Database Configuration ---
+    # Priority 1: Check for DATABASE_URL (Neon / Render / Production)
+    if os.environ.get('DATABASE_URL'):
         db_url = os.environ.get('DATABASE_URL')
+        # Fix for SQLAlchemy compatibility with Postgres
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql://", 1)
         SQLALCHEMY_DATABASE_URI = db_url
+    
+    # Priority 2: Vercel Read-Only Fallback (If no DB URL is set)
+    elif os.environ.get('VERCEL'):
+        SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/mess_system.db'
         
-    # 3. Fallback to Local SQLite (for your computer)
+    # Priority 3: Local Development (Your Computer)
     else:
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "mess_system.db")}'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # --- Razorpay Payment Configuration (NEW) ---
+    # Get these from: Razorpay Dashboard -> Settings -> API Keys -> Generate Test Key
+    RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_YOUR_KEY_HERE')
+    RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'YOUR_SECRET_HERE')
+
     # --- File Uploads (Cloudinary) ---
     CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', 'my_cloud_name')
     CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', 'my_api_key')
     CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', 'my_api_secret')
 
     # Local paths (Used as temporary storage or fallback)
-    # Note: On Vercel, we can only write to /tmp, but Cloudinary handles uploads directly mostly.
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'app', 'static', 'profile_pics')
     
     # --- Email Settings (SendGrid) ---
