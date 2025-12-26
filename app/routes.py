@@ -13,6 +13,7 @@ from .extensions import db
 from .models import User, Subscription, Attendance, WeeklyMenu, Feedback, Notification, MealRequest, LeaveRequest, Payment
 from .utils import is_valid_username, is_strong_password, generate_next_customer_id, utc_to_ist_str, send_email, upload_file
 from config import Config
+from sqlalchemy import text
 
 bp = Blueprint('main', __name__)
 
@@ -571,3 +572,13 @@ def init_db_fix():
             return "Database Updated Successfully! Try Registering now."
     except Exception as e:
         return f"Error: {str(e)}"
+@bp.route('/fix_db_null')
+def fix_db_null():
+    try:
+        # This SQL command removes the "NOT NULL" constraint from unique_id
+        with db.engine.connect() as conn:
+            conn.execute(text('ALTER TABLE "user" ALTER COLUMN unique_id DROP NOT NULL;'))
+            conn.commit()
+        return "Database Fixed! 'unique_id' now accepts NULL values. You can Register the Owner now."
+    except Exception as e:
+        return f"Error fixing DB: {str(e)}"    
