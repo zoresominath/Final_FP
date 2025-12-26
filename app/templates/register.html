@@ -75,4 +75,27 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Get today's date
+        var today = new Date();
+        // Subtract 1 day to make the max selectable date "Yesterday"
+        today.setDate(today.getDate() - 1);
+        
+        // Format date to YYYY-MM-DD string
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0!
+        var yyyy = today.getFullYear();
+        
+        var maxDate = yyyy + '-' + mm + '-' + dd;
+        
+        // Set the 'max' attribute on the date input
+        var dobInput = document.querySelector('input[name="dob"]');
+        if (dobInput) {
+            dobInput.setAttribute("max", maxDate);
+        }
+    });
+</script>
+
 {% endblock %}

@@ -323,4 +323,25 @@
         </div>
     </div>
 </main>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Leave Request Date Restriction
+        var today = new Date();
+        
+        // Format to YYYY-MM-DD
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0
+        var yyyy = today.getFullYear();
+        
+        var minDate = yyyy + '-' + mm + '-' + dd;
+        
+        // Find the start date input and set the min attribute
+        var leaveInput = document.querySelector('input[name="start_date"]');
+        if (leaveInput) {
+            leaveInput.setAttribute("min", minDate);
+        }
+    });
+</script>
+
 {% endblock %}
