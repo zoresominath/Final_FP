@@ -13,7 +13,6 @@ from .extensions import db
 from .models import User, Subscription, Attendance, WeeklyMenu, Feedback, Notification, MealRequest, LeaveRequest, Payment
 from .utils import is_valid_username, is_strong_password, generate_next_customer_id, utc_to_ist_str, send_email, upload_file
 from config import Config
-from sqlalchemy import text
 
 bp = Blueprint('main', __name__)
 
@@ -88,14 +87,15 @@ def register():
 
         dob = datetime.strptime(dob_raw, "%Y-%m-%d").date() if dob_raw else None
         
-        # --- ID GENERATION (Only for Customers) ---
-        unique_id = None
-        if user_type == 'customer':
-            # Get the last customer to generate the next sequential ID
+        # --- ID GENERATION LOGIC ---
+        if user_type == 'owner':
+            unique_id = 'Z9999' # Fixed ID for Owner to satisfy NOT NULL constraint
+        else:
+            # Customer Logic: Get last ID and increment
             last_customer = User.query.filter_by(user_type='customer').order_by(User.id.desc()).first()
             last_id_str = last_customer.unique_id if last_customer else None
             unique_id = generate_next_customer_id(last_id_str)
-        # ------------------------------------------
+        # ---------------------------
         
         u = User(
             username=username, 
@@ -284,10 +284,6 @@ def delete_account():
         db.session.rollback()
         flash('Error deleting account.', 'danger')
         return redirect(url_for('main.dashboard'))
-
-# -----------------------------------------------------------
-#  MANUAL PAYMENT REQUEST (UNIQUE ID FLOW)
-# -----------------------------------------------------------
 
 @bp.route('/submit_payment', methods=['POST'])
 @login_required
@@ -564,21 +560,3 @@ def reset_password(token):
                 flash('Password reset.', 'success')
                 return redirect(url_for('main.login'))
     return render_template('reset_password.html')
-@bp.route('/init_db_fix')
-def init_db_fix():
-    try:
-        with current_app.app_context():
-            db.create_all() # This creates missing tables/columns
-            return "Database Updated Successfully! Try Registering now."
-    except Exception as e:
-        return f"Error: {str(e)}"
-@bp.route('/fix_db_null')
-def fix_db_null():
-    try:
-        with db.engine.connect() as conn:
-            # PostgreSQL command to allow NULL values in unique_id column
-            conn.execute(text('ALTER TABLE "user" ALTER COLUMN unique_id DROP NOT NULL;'))
-            conn.commit()
-        return "<h1>Database Fixed Successfully!</h1> <p>You can now go back and Register as Owner.</p>"
-    except Exception as e:
-        return f"<h1>Error:</h1> <p>{str(e)}</p>"
