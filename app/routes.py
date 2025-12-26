@@ -575,10 +575,10 @@ def init_db_fix():
 @bp.route('/fix_db_null')
 def fix_db_null():
     try:
-        # This SQL command removes the "NOT NULL" constraint from unique_id
         with db.engine.connect() as conn:
+            # PostgreSQL command to allow NULL values in unique_id column
             conn.execute(text('ALTER TABLE "user" ALTER COLUMN unique_id DROP NOT NULL;'))
             conn.commit()
-        return "Database Fixed! 'unique_id' now accepts NULL values. You can Register the Owner now."
+        return "<h1>Database Fixed Successfully!</h1> <p>You can now go back and Register as Owner.</p>"
     except Exception as e:
-        return f"Error fixing DB: {str(e)}"    
+        return f"<h1>Error:</h1> <p>{str(e)}</p>"
