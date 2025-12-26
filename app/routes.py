@@ -563,3 +563,11 @@ def reset_password(token):
                 flash('Password reset.', 'success')
                 return redirect(url_for('main.login'))
     return render_template('reset_password.html')
+@bp.route('/init_db_fix')
+def init_db_fix():
+    try:
+        with current_app.app_context():
+            db.create_all() # This creates missing tables/columns
+            return "Database Updated Successfully! Try Registering now."
+    except Exception as e:
+        return f"Error: {str(e)}"

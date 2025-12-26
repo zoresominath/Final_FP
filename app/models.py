@@ -8,7 +8,9 @@ def load_user(user_id):
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    unique_id = db.Column(db.String(16), unique=True, nullable=False)
+    # The Unique ID column (A1, A2... B1...)
+    unique_id = db.Column(db.String(20), unique=True, nullable=True)
+    
     username = db.Column(db.String(100), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
@@ -17,27 +19,34 @@ class User(UserMixin, db.Model):
     image_filename = db.Column(db.String(200), nullable=True)
     date_of_birth = db.Column(db.Date, nullable=True)
 
-    # --- NEW COLUMNS (Added for One Time/Two Time Logic) ---
-    mess_type = db.Column(db.String(20), default='Two Time')  # Stores 'One Time' or 'Two Time'
-    monthly_charge = db.Column(db.Float, default=2800.0)      # Stores the plan price (1500 or 2800)
-    cost_per_meal = db.Column(db.Float, default=0.0)          # Calculated cost per plate
-    balance = db.Column(db.Float, default=0.0)                # Main wallet balance for the user
+    # Mess Details
+    mess_type = db.Column(db.String(20), default='Two Time')
+    monthly_charge = db.Column(db.Float, default=2800.0)
+    cost_per_meal = db.Column(db.Float, default=0.0)
+    balance = db.Column(db.Float, default=0.0)
+
+    # Relationships
+    subscriptions = db.relationship('Subscription', backref='user', lazy=True)
+    attendance = db.relationship('Attendance', backref='user', lazy=True)
+    payments = db.relationship('Payment', backref='user', lazy=True)
+    meal_requests = db.relationship('MealRequest', backref='user', lazy=True)
+    leave_requests = db.relationship('LeaveRequest', backref='user', lazy=True)
+    feedback = db.relationship('Feedback', backref='user', lazy=True)
+    # Note: Notification is handled manually via to_user_id query usually
 
 class Subscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
-    balance = db.Column(db.Float, default=2800.0) # (Legacy field, we are now using User.balance mostly)
+    balance = db.Column(db.Float, default=2800.0)
     is_active = db.Column(db.Boolean, default=True)
-    user = db.relationship('User', backref='subscription')
 
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     meal_type = db.Column(db.String(20))
-    user = db.relationship('User', backref='attendance')
 
 class WeeklyMenu(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -48,10 +57,9 @@ class WeeklyMenu(db.Model):
 
 class Feedback(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text)
     date = db.Column(db.DateTime, default=datetime.utcnow)
-    user = db.relationship('User', backref='feedback')
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -66,7 +74,6 @@ class MealRequest(db.Model):
     content = db.Column(db.Text, nullable=False)
     date_requested = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='Pending')
-    user = db.relationship('User', backref='meal_requests')
 
 class LeaveRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,16 +83,11 @@ class LeaveRequest(db.Model):
     reason = db.Column(db.Text)
     status = db.Column(db.String(20), default='Pending')
     date_requested = db.Column(db.DateTime, default=datetime.utcnow)
-    user = db.relationship('User', backref='leave_requests')
 
 class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # --- NEW COLUMNS FOR MANUAL PAYMENTS ---
-    transaction_id = db.Column(db.String(100), nullable=True) # Stores the UTR/Ref Number
-    status = db.Column(db.String(20), default='Pending')      # Pending, Approved, Rejected
-    
-    user = db.relationship('User', backref='payments')
+    transaction_id = db.Column(db.String(100), nullable=True) # Used for Unique ID
+    status = db.Column(db.String(20), default='Pending')
