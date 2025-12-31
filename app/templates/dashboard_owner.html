@@ -237,7 +237,24 @@
                 <div class="d-flex justify-content-between mb-3"><h4>Users</h4><form class="d-flex"><input name="q" class="form-control me-2" placeholder="Search"><button class="btn btn-outline-primary">Search</button></form></div>
                 <table class="table table-hover">
                     <thead class="table-light"><tr><th>User</th><th>ID</th><th>Action</th></tr></thead>
-                    <tbody>{% for u in all_users %}<tr><td>{{ u.username }}<br><small class="text-muted">{{ u.email }}</small></td><td>{{ u.unique_id }}</td><td><a href="{{ url_for('main.view_user', user_id=u.id) }}" class="btn btn-sm btn-info">View</a></td></tr>{% endfor %}</tbody>
+                    <tbody>
+                        {% for u in all_users %}
+                        <tr>
+                            <td>{{ u.username }}<br><small class="text-muted">{{ u.email }}</small></td>
+                            <td>{{ u.unique_id }}</td>
+                            <td>
+                                <a href="{{ url_for('main.view_user', user_id=u.id) }}" class="btn btn-sm btn-info me-1" title="View Details"><i class="bi bi-eye"></i> View</a>
+                                
+                                {% if u.user_type != 'owner' %}
+                                <form action="{{ url_for('main.delete_user_by_owner', user_id=u.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to permanently delete {{ u.username }}? This cannot be undone.');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete User"><i class="bi bi-trash"></i></button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
                 </table>
             </div>
         </div>

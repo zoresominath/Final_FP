@@ -304,6 +304,38 @@ def delete_account():
         flash('Error deleting account.', 'danger')
         return redirect(url_for('main.dashboard'))
 
+@bp.route('/delete_user_by_owner/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user_by_owner(user_id):
+    if current_user.user_type != 'owner':
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('main.dashboard'))
+    
+    u = User.query.get_or_404(user_id)
+    if u.user_type == 'owner':
+        flash('Cannot delete another owner.', 'danger')
+        return redirect(url_for('main.dashboard'))
+        
+    try:
+        # Delete related data first
+        Attendance.query.filter_by(user_id=u.id).delete()
+        Payment.query.filter_by(user_id=u.id).delete()
+        Subscription.query.filter_by(user_id=u.id).delete()
+        Notification.query.filter_by(to_user_id=u.id).delete()
+        Feedback.query.filter_by(user_id=u.id).delete()
+        MealRequest.query.filter_by(user_id=u.id).delete()
+        LeaveRequest.query.filter_by(user_id=u.id).delete()
+        
+        # Delete user
+        db.session.delete(u)
+        db.session.commit()
+        flash(f'User {u.username} deleted.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error deleting user.', 'danger')
+        
+    return redirect(url_for('main.dashboard'))
+
 @bp.route('/submit_payment', methods=['POST'])
 @login_required
 def submit_payment():
