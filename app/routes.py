@@ -94,14 +94,11 @@ def register():
         
         # --- ID GENERATION LOGIC ---
         if user_type == 'owner':
-            # Assign fixed IDs for owners to satisfy NOT NULL constraint
-            # First owner gets Z9999, Second gets Z9998
             if User.query.filter_by(unique_id='Z9999').first():
                 unique_id = 'Z9998'
             else:
                 unique_id = 'Z9999'
         else:
-            # Customer Logic: Get last ID and increment (A1 -> A2...)
             last_customer = User.query.filter_by(user_type='customer').order_by(User.id.desc()).first()
             last_id_str = last_customer.unique_id if last_customer else None
             unique_id = generate_next_customer_id(last_id_str)
@@ -260,11 +257,7 @@ def view_user(user_id):
     if current_user.user_type != 'owner': return redirect(url_for('main.dashboard'))
     
     u = User.query.get_or_404(user_id)
-    
-    # 1. Fetch Attendance
     attendance = Attendance.query.filter_by(user_id=u.id).order_by(Attendance.timestamp.desc()).all()
-    
-    # 2. Fetch Payments / Subscription History (ADDED THIS)
     payments = Payment.query.filter_by(user_id=u.id).order_by(Payment.timestamp.desc()).all()
     
     return render_template('view_user.html', u=u, attendance=attendance, payments=payments)
@@ -314,7 +307,8 @@ def delete_user_by_owner(user_id):
     u = User.query.get_or_404(user_id)
     if u.user_type == 'owner':
         flash('Cannot delete another owner.', 'danger')
-        return redirect(url_for('main.dashboard'))
+        # REDIRECT BACK TO USERS TAB
+        return redirect(url_for('main.dashboard') + '#users')
         
     try:
         # Delete related data first
@@ -326,7 +320,6 @@ def delete_user_by_owner(user_id):
         MealRequest.query.filter_by(user_id=u.id).delete()
         LeaveRequest.query.filter_by(user_id=u.id).delete()
         
-        # Delete user
         db.session.delete(u)
         db.session.commit()
         flash(f'User {u.username} deleted.', 'success')
@@ -334,12 +327,12 @@ def delete_user_by_owner(user_id):
         db.session.rollback()
         flash('Error deleting user.', 'danger')
         
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO USERS TAB
+    return redirect(url_for('main.dashboard') + '#users')
 
 @bp.route('/submit_payment', methods=['POST'])
 @login_required
 def submit_payment():
-    # 'transaction_id' field contains the User's Unique ID entered in the form
     submitted_id = request.form.get('transaction_id')
     amount = current_user.monthly_charge
     
@@ -347,29 +340,18 @@ def submit_payment():
         flash('Please enter a valid Unique ID.', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    # CHECK FOR PENDING REQUESTS ONLY
-    # Allow re-submission if previous request was approved/rejected, but not if one is currently pending.
-    existing_pending = Payment.query.filter_by(
-        transaction_id=submitted_id,
-        status='Pending'
-    ).first()
-
+    existing_pending = Payment.query.filter_by(transaction_id=submitted_id, status='Pending').first()
     if existing_pending:
         flash('A renewal request with this ID is already pending approval.', 'warning')
         return redirect(url_for('main.dashboard'))
 
-    # Create new Pending Payment
-    new_payment = Payment(
-        user_id=current_user.id,
-        amount=amount,
-        transaction_id=submitted_id,
-        status='Pending'
-    )
+    new_payment = Payment(user_id=current_user.id, amount=amount, transaction_id=submitted_id, status='Pending')
     db.session.add(new_payment)
     db.session.commit()
     
     flash('Renewal request sent! Please wait for approval.', 'info')
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO DASHBOARD (Users pay from main screen)
+    return redirect(url_for('main.dashboard')) 
 
 @bp.route('/verify_payment/<int:payment_id>/<action>')
 @login_required
@@ -380,7 +362,6 @@ def verify_payment(payment_id, action):
     
     if action == 'approve':
         payment.status = 'Approved'
-        # --- RENEWAL LOGIC ---
         start = date.today()
         end = start + timedelta(days=30)
         sub = Subscription.query.filter_by(user_id=user.id, is_active=True).first()
@@ -401,7 +382,8 @@ def verify_payment(payment_id, action):
         flash('Request rejected.', 'danger')
         
     db.session.commit()
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO PAYMENTS TAB
+    return redirect(url_for('main.dashboard') + '#payments')
 
 @bp.route('/scanner')
 @login_required
@@ -436,7 +418,6 @@ def scan_attendance():
     
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     meals_eaten_today = Attendance.query.filter(Attendance.user_id==u.id, Attendance.timestamp >= today_start).count()
-    
     limit = 1 if u.mess_type == 'One Time' else 2
     
     if meals_eaten_today >= limit:
@@ -467,7 +448,8 @@ def submit_feedback():
         db.session.add(Feedback(user_id=current_user.id, content=content))
         db.session.commit()
         flash('Feedback submitted.', 'success')
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO FEEDBACK TAB
+    return redirect(url_for('main.dashboard') + '#feedback')
 
 @bp.route('/send_notification', methods=['POST'])
 @login_required
@@ -477,12 +459,12 @@ def send_notification():
     message = request.form['message']
     to_user_id = request.form.get('to_user_id')
     
-    note = Notification(title=title, message=message, 
-                        to_user_id=int(to_user_id) if to_user_id else None)
+    note = Notification(title=title, message=message, to_user_id=int(to_user_id) if to_user_id else None)
     db.session.add(note)
     db.session.commit()
     flash('Notification sent.', 'success')
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO NOTIFY TAB
+    return redirect(url_for('main.dashboard') + '#notify')
 
 @bp.route('/update_menu', methods=['POST'])
 @login_required
@@ -500,7 +482,8 @@ def update_menu():
         db.session.add(WeeklyMenu(day=day, lunch=lunch, dinner=dinner, created_by=current_user.id))
     db.session.commit()
     flash(f'Menu updated for {day}.', 'success')
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO MENU TAB
+    return redirect(url_for('main.dashboard') + '#menu')
 
 @bp.route('/request_meal', methods=['POST'])
 @login_required
@@ -510,7 +493,8 @@ def request_meal():
         db.session.add(MealRequest(user_id=current_user.id, content=content))
         db.session.commit()
         flash('Request submitted.', 'success')
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO REQUESTS TAB
+    return redirect(url_for('main.dashboard') + '#requests')
 
 @bp.route('/request_leave', methods=['POST'])
 @login_required
@@ -526,7 +510,8 @@ def request_leave():
         flash('Leave requested.', 'success')
     else:
         flash('Invalid data.', 'danger')
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO LEAVE TAB
+    return redirect(url_for('main.dashboard') + '#leave')
 
 @bp.route('/process_leave/<int:request_id>', methods=['POST'])
 @login_required
@@ -549,13 +534,13 @@ def process_leave(request_id):
         db.session.commit()
         flash('Leave rejected.', 'info')
         
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO LEAVE TAB
+    return redirect(url_for('main.dashboard') + '#leave')
 
 @bp.route('/process_meal_request/<int:request_id>', methods=['POST'])
 @login_required
 def process_meal_request(request_id):
     if current_user.user_type != 'owner': return redirect(url_for('main.dashboard'))
-    
     req = MealRequest.query.get_or_404(request_id)
     action = request.form.get('action')
     
@@ -569,7 +554,8 @@ def process_meal_request(request_id):
         flash('Meal request rejected.', 'info')
         
     db.session.commit()
-    return redirect(url_for('main.dashboard'))
+    # REDIRECT BACK TO REQUESTS TAB
+    return redirect(url_for('main.dashboard') + '#requests')
 
 @bp.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
@@ -580,10 +566,7 @@ def forgot_password():
             s = get_serializer()
             token = s.dumps(user.email, salt='reset-salt')
             link = url_for('main.reset_password', token=token, _external=True)
-            
-            email_body = f"Click here to reset your password: {link}"
-            send_email(user.email, "Reset Password", email_body)
-            
+            send_email(user.email, "Reset Password", f"Click here to reset your password: {link}")
         flash('If registered, a reset link was sent.', 'info')
         return redirect(url_for('main.login'))
     return render_template('forgot_password.html')

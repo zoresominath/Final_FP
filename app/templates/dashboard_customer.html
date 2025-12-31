@@ -394,6 +394,16 @@
         if (leaveInput) {
             leaveInput.setAttribute("min", minDate);
         }
+
+        // --- NEW: KEEP TAB ACTIVE LOGIC ---
+        var hash = window.location.hash;
+        if (hash) {
+            var triggerEl = document.querySelector('.nav-link[href="' + hash + '"]');
+            if (triggerEl) {
+                var tab = new bootstrap.Tab(triggerEl);
+                tab.show();
+            }
+        }
     });
 </script>
 
