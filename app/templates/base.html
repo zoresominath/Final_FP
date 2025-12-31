@@ -49,13 +49,19 @@
             padding: 2rem;
         }
 
+        /* Sidebar Title Style */
         .mess-name { 
             font-family: 'Lobster', cursive; 
-            color: #0d6efd; 
+            background: -webkit-linear-gradient(45deg, #FFD700, #ff8c00); /* Yellow Gradient */
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
             font-size: 1.8rem;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
 
         .sidebar .nav-link { 
@@ -100,19 +106,19 @@
             top: 30px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 10000; /* Highest priority */
+            z-index: 10000;
             width: 90%;
             max-width: 400px;
             display: flex;
             flex-direction: column;
             gap: 15px;
-            pointer-events: none; /* Let clicks pass through empty space */
+            pointer-events: none;
         }
 
         .flash-popup {
             background: white;
             padding: 16px 24px;
-            border-radius: 50px; /* Pill Shape */
+            border-radius: 50px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             display: flex;
             align-items: center;
@@ -120,31 +126,25 @@
             font-weight: 600;
             color: white;
             font-size: 1rem;
-            opacity: 0; /* Hidden by default for animation */
+            opacity: 0;
             animation: slideDownFadeIn 0.5s ease-out forwards;
-            pointer-events: auto; /* Enable interaction */
+            pointer-events: auto;
         }
 
-        /* Category Gradients */
         .flash-success { background: linear-gradient(135deg, #198754, #20c997); }
         .flash-danger { background: linear-gradient(135deg, #dc3545, #f06595); }
         .flash-warning { background: linear-gradient(135deg, #fd7e14, #ffc107); color: #333; }
         .flash-info { background: linear-gradient(135deg, #0d6efd, #0dcaf0); }
-
-        /* Icon Styling */
         .flash-popup i { font-size: 1.2rem; margin-right: 10px; }
 
-        /* Animations */
         @keyframes slideDownFadeIn {
             0% { transform: translateY(-50px); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
         }
-
         @keyframes slideUpFadeOut {
             0% { transform: translateY(0); opacity: 1; }
             100% { transform: translateY(-50px); opacity: 0; }
         }
-
         .fade-out-active {
             animation: slideUpFadeOut 0.5s ease-in forwards !important;
         }
@@ -162,7 +162,6 @@
                         {% elif category == 'warning' %} <i class="bi bi-exclamation-triangle-fill"></i>
                         {% else %} <i class="bi bi-info-circle-fill"></i>
                         {% endif %}
-                        
                         <span>{{ message }}</span>
                     </div>
                 {% endfor %}
@@ -170,32 +169,33 @@
         {% endwith %}
     </div>
 
-    {% if current_user.is_authenticated %}
-        <nav class="sidebar">
-            <div class="mess-name mb-4">
-                <img src="https://cdn-icons-png.flaticon.com/512/1046/1046784.png" alt="Logo" width="40" height="40">
-                <span>Bachelor's Kitchen</span>
-            </div>
-            
-            <div class="nav flex-column nav-pills">
-                <a href="{{ url_for('main.dashboard') }}" class="nav-link">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </a>
-                <a href="{{ url_for('main.scanner') }}" class="nav-link">
-                    <i class="bi bi-qr-code-scan"></i> Scan QR
-                </a>
-                <a href="#menu" data-bs-toggle="tab" class="nav-link">
-                    <i class="bi bi-egg-fried"></i> Menu
-                </a>
-                <a href="{{ url_for('main.update_profile') }}" class="nav-link">
-                    <i class="bi bi-person-circle"></i> My Profile
-                </a>
-                <a href="{{ url_for('main.logout') }}" class="nav-link text-danger mt-4">
-                    <i class="bi bi-box-arrow-right"></i> Logout
-                </a>
-            </div>
-        </nav>
-    {% endif %}
+    {% block sidebar %}
+        {% if current_user.is_authenticated %}
+            <nav class="sidebar">
+                <div class="mess-name mb-4">
+                    <span>Bachelor's Kitchen</span>
+                </div>
+                
+                <div class="nav flex-column nav-pills">
+                    <a href="{{ url_for('main.dashboard') }}" class="nav-link">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a href="{{ url_for('main.scanner') }}" class="nav-link">
+                        <i class="bi bi-qr-code-scan"></i> Scan QR
+                    </a>
+                    <a href="#menu" data-bs-toggle="tab" class="nav-link">
+                        <i class="bi bi-egg-fried"></i> Menu
+                    </a>
+                    <a href="{{ url_for('main.update_profile') }}" class="nav-link">
+                        <i class="bi bi-person-circle"></i> My Profile
+                    </a>
+                    <a href="{{ url_for('main.logout') }}" class="nav-link text-danger mt-4">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </div>
+            </nav>
+        {% endif %}
+    {% endblock %}
 
     <div class="content-wrapper {% if current_user.is_authenticated %}with-sidebar{% endif %}">
         {% block content %}{% endblock %}
@@ -207,17 +207,10 @@
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const alerts = document.querySelectorAll('.flash-popup');
-            
             alerts.forEach(alert => {
-                // Wait for 2 seconds (2000 milliseconds)
                 setTimeout(() => {
-                    // Add the fade-out animation class
                     alert.classList.add('fade-out-active');
-                    
-                    // After the animation ends (0.5s), remove it from DOM
-                    setTimeout(() => {
-                        alert.remove();
-                    }, 500);
+                    setTimeout(() => { alert.remove(); }, 500);
                 }, 2000); 
             });
         });

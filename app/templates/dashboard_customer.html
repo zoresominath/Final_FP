@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block sidebar %}{% endblock %}
+
 {% block content %}
 <style>
     /* 1. Minimized Credit Card */
@@ -66,9 +68,9 @@
         margin-bottom: 10px;
     }
 
-    /* Attractive Title Style */
+    /* --- UPDATED TITLE STYLE (YELLOW/GOLD) --- */
     .mess-title-gradient {
-        background: -webkit-linear-gradient(45deg, #0d6efd, #0dcaf0);
+        background: -webkit-linear-gradient(45deg, #FFD700, #ff8c00);
         -webkit-background-clip: text;
         background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -83,48 +85,6 @@
         0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7); }
         70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(0, 0, 0, 0); }
         100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
-    }
-
-    /* --- UPDATED: Compact & Attractive Welcome Card --- */
-    .welcome-card-bg {
-        /* Vibrant Gradient */
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        color: white;
-        position: relative;
-        overflow: hidden;
-        border-radius: 12px;
-    }
-    .welcome-text {
-        font-weight: 700;
-        font-size: 1.6rem; /* Reduced size */
-        letter-spacing: 0.5px;
-    }
-    .wave-emoji {
-        display: inline-block;
-        animation: wave 2.5s infinite;
-        transform-origin: 70% 70%;
-    }
-    /* Subtle decorative circle behind text */
-    .welcome-card-bg::before {
-        content: '';
-        position: absolute;
-        bottom: -30px;
-        left: -30px;
-        width: 100px;
-        height: 100px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-    }
-    @keyframes wave {
-        0% { transform: rotate(0deg); }
-        10% { transform: rotate(14deg); }
-        20% { transform: rotate(-8deg); }
-        30% { transform: rotate(14deg); }
-        40% { transform: rotate(-4deg); }
-        50% { transform: rotate(10deg); }
-        60% { transform: rotate(0deg); }
-        100% { transform: rotate(0deg); }
     }
 
     /* Floating Action Button for Quick QR Access */
@@ -145,9 +105,13 @@
 <div class="sidebar">
     <div class="profile-section">
         {% if current_user.image_filename %}
-            <img src="{{ url_for('static', filename='profile_pics/' + current_user.image_filename) if 'http' not in current_user.image_filename else current_user.image_filename }}" class="sidebar-profile-img" alt="Profile">
+            {% if 'http' in current_user.image_filename %}
+                <img src="{{ current_user.image_filename }}" class="sidebar-profile-img" alt="Profile">
+            {% else %}
+                <img src="{{ url_for('static', filename='profile_pics/' + current_user.image_filename) }}" class="sidebar-profile-img" alt="Profile">
+            {% endif %}
         {% else %}
-            <img src="https://ui-avatars.com/api/?name={{ current_user.username }}&background=random&size=128" class="sidebar-profile-img" alt="Profile">
+            <img src="https://ui-avatars.com/api/?name={{ current_user.username }}&background=0D8ABC&color=fff&size=128" class="sidebar-profile-img" alt="Profile">
         {% endif %}
         
         <h5 class="fw-bold mb-0">{{ current_user.username }}</h5>
@@ -172,9 +136,10 @@
 
 <main class="main-content">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
+        <div class="d-none d-lg-block">
             <h3 class="mess-title-gradient mb-0">Bachelor's Kitchen</h3>
         </div>
+        
         <div class="dropdown">
             <button class="btn btn-white shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                 Update Profile
@@ -187,15 +152,11 @@
         </div>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}{% for c, m in messages %}<div class="alert alert-{{ c }} shadow-sm">{{ m }}</div>{% endfor %}{% endif %}
-    {% endwith %}
-
     <div class="tab-content">
         <div class="tab-pane fade show active" id="dashboard">
-            <div class="row g-4">
+            <div class="row justify-content-center">
                 
-                <div class="col-md-4">
+                <div class="col-md-6 col-lg-5">
                     <div class="card credit-card-bg border-0 mb-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <span class="card-label">Balance</span>
@@ -226,7 +187,7 @@
                          {% set pending = payments|selectattr("status", "equalto", "Pending")|list %}
                          {% if pending %}
                              <button class="btn btn-sm btn-warning w-100 disabled" disabled>
-                                 <i class="bi bi-hourglass-split"></i> Verification Pending...
+                                 <i class="bi bi-hourglass-split"></i> Request Pending...
                              </button>
                          {% else %}
                              <a href="upi://pay?pa=zoresominath-2@okhdfcbank&pn=SominathZore&am={{ current_user.monthly_charge }}&cu=INR&tn=MessFee" 
@@ -240,17 +201,6 @@
                          {% endif %}
                     {% endif %}
                 </div>
-                
-                <div class="col-md-8">
-                    <div class="card welcome-card-bg shadow-sm h-100">
-                        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-4">
-                            <h2 class="welcome-text mb-0">
-                                Welcome back, {{ current_user.username }}! <span class="wave-emoji">👋</span>
-                            </h2>
-                        </div>
-                    </div>
-                </div>
-                
             </div>
         </div>
 
@@ -415,7 +365,7 @@
                         <strong>Step 2:</strong> Copy the <strong>Transaction ID / UTR</strong> from your app.<br>
                         <strong>Step 3:</strong> Paste it below to send approval request.
                         <br><br>
-                        Paying manually? UPI ID: <span class="font-monospace text-dark user-select-all">zoresominath-2@okhdfcbank</span>
+                        Paying manually? UPI ID: <span class="font-monospace text-dark user-select-all">abhisheknajan143-2@okaxis</span>
                     </div>
                     
                     <div class="form-floating mb-3">

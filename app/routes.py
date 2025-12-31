@@ -43,10 +43,12 @@ def register():
         password_raw = request.form['password']
         form_admin_code = request.form.get('admin_code', '').strip()
         
+        # Determine User Type
         user_type = 'owner' if form_admin_code == current_app.config.get('SECRET_ADMIN_CODE') else 'customer'
         gender = request.form.get('gender', 'Male')
         mess_type = request.form.get('mess_type', 'Two Time') 
 
+        # Validation
         if not is_valid_username(username): 
             flash('Invalid username. Use letters and numbers only.', 'danger')
             return redirect(url_for('main.register'))
@@ -59,9 +61,12 @@ def register():
             flash('Username taken.', 'danger')
             return redirect(url_for('main.register'))
         
-        if user_type == 'owner' and User.query.filter_by(user_type='owner').first():
-            flash('Owner already exists.', 'danger')
-            return redirect(url_for('main.register'))
+        # --- 2-OWNER LIMIT CHECK ---
+        if user_type == 'owner':
+            existing_owners = User.query.filter_by(user_type='owner').count()
+            if existing_owners >= 2:
+                flash('Maximum number of owners (2) reached.', 'danger')
+                return redirect(url_for('main.register'))
 
         # Pricing Logic
         monthly_charge = 0.0
@@ -89,9 +94,14 @@ def register():
         
         # --- ID GENERATION LOGIC ---
         if user_type == 'owner':
-            unique_id = 'Z9999' # Fixed ID for Owner to satisfy NOT NULL constraint
+            # Assign fixed IDs for owners to satisfy NOT NULL constraint
+            # First owner gets Z9999, Second gets Z9998
+            if User.query.filter_by(unique_id='Z9999').first():
+                unique_id = 'Z9998'
+            else:
+                unique_id = 'Z9999'
         else:
-            # Customer Logic: Get last ID and increment
+            # Customer Logic: Get last ID and increment (A1 -> A2...)
             last_customer = User.query.filter_by(user_type='customer').order_by(User.id.desc()).first()
             last_id_str = last_customer.unique_id if last_customer else None
             unique_id = generate_next_customer_id(last_id_str)
@@ -151,7 +161,9 @@ def dashboard():
         start_of_month = datetime(now.year, now.month, 1)
 
         q = request.args.get('q', '').strip()
-        base_query = User.query.filter(User.id != current_user.id, User.user_type == 'customer')
+        # Filter: Show only Customers (exclude owners from the user list)
+        base_query = User.query.filter(User.user_type == 'customer')
+        
         if q:
             base_query = base_query.filter(or_(User.unique_id.ilike(f"%{q}%"), User.username.ilike(f"%{q}%")))
         all_users = base_query.order_by(User.username.asc()).all()
@@ -246,9 +258,16 @@ def dashboard():
 @login_required
 def view_user(user_id):
     if current_user.user_type != 'owner': return redirect(url_for('main.dashboard'))
+    
     u = User.query.get_or_404(user_id)
+    
+    # 1. Fetch Attendance
     attendance = Attendance.query.filter_by(user_id=u.id).order_by(Attendance.timestamp.desc()).all()
-    return render_template('view_user.html', u=u, attendance=attendance)
+    
+    # 2. Fetch Payments / Subscription History (ADDED THIS)
+    payments = Payment.query.filter_by(user_id=u.id).order_by(Payment.timestamp.desc()).all()
+    
+    return render_template('view_user.html', u=u, attendance=attendance, payments=payments)
 
 @bp.route('/update_profile', methods=['GET', 'POST'])
 @login_required
@@ -288,7 +307,7 @@ def delete_account():
 @bp.route('/submit_payment', methods=['POST'])
 @login_required
 def submit_payment():
-    # 'transaction_id' field now holds the User's Unique ID from the frontend form
+    # 'transaction_id' field contains the User's Unique ID entered in the form
     submitted_id = request.form.get('transaction_id')
     amount = current_user.monthly_charge
     
@@ -297,7 +316,7 @@ def submit_payment():
         return redirect(url_for('main.dashboard'))
 
     # CHECK FOR PENDING REQUESTS ONLY
-    # Block ONLY if there is already a Pending request with this ID.
+    # Allow re-submission if previous request was approved/rejected, but not if one is currently pending.
     existing_pending = Payment.query.filter_by(
         transaction_id=submitted_id,
         status='Pending'
@@ -335,10 +354,8 @@ def verify_payment(payment_id, action):
         sub = Subscription.query.filter_by(user_id=user.id, is_active=True).first()
         
         if sub and sub.end_date >= start:
-            # Extend existing subscription
             sub.end_date += timedelta(days=30)
         else:
-            # Create new subscription
             new_sub = Subscription(user_id=user.id, start_date=start, end_date=end, balance=0)
             db.session.add(new_sub)
             

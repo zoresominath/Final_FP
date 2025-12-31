@@ -5,7 +5,11 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 class Config:
     # --- Security Keys ---
     SECRET_KEY = os.environ.get('SECRET_KEY', 'a-hard-to-guess-secret-key')
-    SECRET_ADMIN_CODE = os.environ.get('SECRET_ADMIN_CODE', "Pass@123")
+    
+    # --- ADMIN CODE FOR OWNER REGISTRATION ---
+    # Use this code in the registration form to create an Owner account.
+    # You can change 'Pass@123' to any password you want.
+    SECRET_ADMIN_CODE = os.environ.get('SECRET_ADMIN_CODE', "Abhi@7263")
 
     # --- Database Configuration ---
     # Priority 1: Check for DATABASE_URL (Neon / Render / Production)
@@ -26,8 +30,7 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # --- Razorpay Payment Configuration (NEW) ---
-    # Get these from: Razorpay Dashboard -> Settings -> API Keys -> Generate Test Key
+    # --- Razorpay Payment Configuration (Future Use) ---
     RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_YOUR_KEY_HERE')
     RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'YOUR_SECRET_HERE')
 

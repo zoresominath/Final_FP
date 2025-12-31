@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block sidebar %}{% endblock %}
+
 {% block content %}
 <style>
     /* 1. Floating Action Button (Scanner) */
@@ -28,7 +30,17 @@
     
     .profile-section { text-align: center; margin-bottom: 1.5rem; }
     .sidebar-profile-img { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #e9ecef; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 10px; }
-    .mess-title-gradient { background: -webkit-linear-gradient(45deg, #0d6efd, #0dcaf0); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-family: 'Lobster', cursive; font-size: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+    
+    /* --- UPDATED TITLE STYLE (YELLOW/GOLD) --- */
+    .mess-title-gradient { 
+        background: -webkit-linear-gradient(45deg, #FFD700, #ff8c00); 
+        -webkit-background-clip: text; 
+        background-clip: text; 
+        -webkit-text-fill-color: transparent; 
+        font-family: 'Lobster', cursive; 
+        font-size: 2rem; 
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1); 
+    }
 
     /* 3. Owner Specific Styles (Cards/Charts) */
     .stat-card { color: white; border: none; overflow: hidden; position: relative; border-radius: 12px; }
@@ -79,7 +91,10 @@
 
 <main class="main-content">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div><h3 class="mess-title-gradient mb-0">Bachelor's Kitchen</h3></div>
+        <div class="d-none d-lg-block">
+            <h3 class="mess-title-gradient mb-0">Bachelor's Kitchen</h3>
+        </div>
+        
         <div class="dropdown">
             <button class="btn btn-white shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">Profile</button>
             <ul class="dropdown-menu dropdown-menu-end shadow">
