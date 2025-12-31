@@ -50,8 +50,8 @@ class Config:
     
     # Standard (Two Time Mess - Lunch & Dinner)
     MALE_MONTHLY = 2800.0
-    FEMALE_MONTHLY = 2400.0
+    FEMALE_MONTHLY = 2200.0
     
     # One Time Mess (Any 1 Meal/Day)
-    MALE_ONE_TIME = 1500.0
-    FEMALE_ONE_TIME = 1300.0
+    MALE_ONE_TIME = 1600.0
+    FEMALE_ONE_TIME = 1400.0
