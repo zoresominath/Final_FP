@@ -616,3 +616,12 @@ def reset_password(token):
                 flash('Password reset.', 'success')
                 return redirect(url_for('main.login'))
     return render_template('reset_password.html')
+# --- TEMPORARY DATABASE RESET ROUTE ---
+@bp.route('/force-reset-db')
+def force_reset_db():
+    try:
+        db.drop_all()
+        db.create_all()
+        return "✅ Database has been RESET successfully! You can now Register."
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
