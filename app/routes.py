@@ -37,52 +37,59 @@ def register():
     if current_user.is_authenticated: return redirect(url_for('main.dashboard'))
     
     if request.method == 'POST':
+        # 1. Get Data
+        name = request.form.get('name', '').strip()  # NEW
+        phone = request.form.get('phone', '').strip() # NEW
         username = request.form['username'].strip()
         email = request.form['email'].strip().lower()
         dob_raw = request.form.get('dob')
         password_raw = request.form['password']
         form_admin_code = request.form.get('admin_code', '').strip()
         
-        # Determine User Type
+        # 2. VALIDATION LOGIC
+        error = None 
+
+        if not name:
+            error = "Full Name is required."
+        
+        # Phone Validation: Must be numbers only and exactly 10 digits
+        elif not phone.isdigit() or len(phone) != 10:
+            error = "Invalid Phone Number. Must be exactly 10 digits."
+
+        elif not is_valid_username(username): 
+            error = 'Invalid username. Use letters and numbers only.'
+        
+        elif not is_strong_password(password_raw): 
+            error = 'Weak password. Must be 8+ chars.'
+        
+        elif User.query.filter_by(username=username).first(): 
+            error = 'Username taken.'
+        
+        # Check Owner Limit
         user_type = 'owner' if form_admin_code == current_app.config.get('SECRET_ADMIN_CODE') else 'customer'
+        if not error and user_type == 'owner':
+            existing_owners = User.query.filter_by(user_type='owner').count()
+            if existing_owners >= 2:
+                error = 'Maximum number of owners (2) reached.'
+
+        # 3. IF ERROR, RENDER TEMPLATE (Do not redirect)
+        # This keeps the 'request.form' data available in the HTML so inputs don't disappear
+        if error:
+            flash(error, 'danger')
+            return render_template('register.html')
+
+        # 4. Success Logic
         gender = request.form.get('gender', 'Male')
         mess_type = request.form.get('mess_type', 'Two Time') 
 
-        # Validation
-        if not is_valid_username(username): 
-            flash('Invalid username. Use letters and numbers only.', 'danger')
-            return redirect(url_for('main.register'))
-        
-        if not is_strong_password(password_raw): 
-            flash('Weak password. Must be 8+ chars.', 'danger')
-            return redirect(url_for('main.register'))
-        
-        if User.query.filter_by(username=username).first(): 
-            flash('Username taken.', 'danger')
-            return redirect(url_for('main.register'))
-        
-        # --- 2-OWNER LIMIT CHECK ---
-        if user_type == 'owner':
-            existing_owners = User.query.filter_by(user_type='owner').count()
-            if existing_owners >= 2:
-                flash('Maximum number of owners (2) reached.', 'danger')
-                return redirect(url_for('main.register'))
-
-        # Pricing Logic
         monthly_charge = 0.0
         cost_per_meal = 0.0
         
         if mess_type == 'One Time':
-            if gender == 'Male':
-                monthly_charge = Config.MALE_ONE_TIME
-            else:
-                monthly_charge = Config.FEMALE_ONE_TIME
+            monthly_charge = Config.MALE_ONE_TIME if gender == 'Male' else Config.FEMALE_ONE_TIME
             cost_per_meal = monthly_charge / 30.0
         else: 
-            if gender == 'Male':
-                monthly_charge = Config.MALE_MONTHLY
-            else:
-                monthly_charge = Config.FEMALE_MONTHLY
+            monthly_charge = Config.MALE_MONTHLY if gender == 'Male' else Config.FEMALE_MONTHLY
             cost_per_meal = monthly_charge / 60.0
 
         image_url = None
@@ -92,19 +99,16 @@ def register():
 
         dob = datetime.strptime(dob_raw, "%Y-%m-%d").date() if dob_raw else None
         
-        # --- ID GENERATION LOGIC ---
         if user_type == 'owner':
-            if User.query.filter_by(unique_id='Z9999').first():
-                unique_id = 'Z9998'
-            else:
-                unique_id = 'Z9999'
+            unique_id = 'Z9998' if User.query.filter_by(unique_id='Z9999').first() else 'Z9999'
         else:
             last_customer = User.query.filter_by(user_type='customer').order_by(User.id.desc()).first()
             last_id_str = last_customer.unique_id if last_customer else None
             unique_id = generate_next_customer_id(last_id_str)
-        # ---------------------------
         
         u = User(
+            name=name,      # Save Name
+            phone=phone,    # Save Phone
             username=username, 
             email=email, 
             password=generate_password_hash(password_raw),
@@ -267,17 +271,37 @@ def view_user(user_id):
 def update_profile():
     u = User.query.get(current_user.id)
     if request.method == 'POST':
+        # Get Data
+        new_name = request.form.get('name', '').strip()
+        new_phone = request.form.get('phone', '').strip()
+        
+        # Validation
+        if not new_name:
+            flash("Name cannot be empty.", "danger")
+            return redirect(url_for('main.update_profile'))
+            
+        if new_phone and (not new_phone.isdigit() or len(new_phone) != 10):
+            flash("Invalid phone number.", "danger")
+            return redirect(url_for('main.update_profile'))
+
+        # Update Fields
+        u.name = new_name
+        u.phone = new_phone
         u.username = request.form['username']
         u.email = request.form['email']
+        
         if request.form.get('password'):
             u.password = generate_password_hash(request.form['password'])
+            
         file = request.files.get('image')
         if file and file.filename:
             image_url = upload_file(file)
             if image_url: u.image_filename = image_url
+            
         db.session.commit()
-        flash('Updated.', 'success')
+        flash('Profile Updated.', 'success')
         return redirect(url_for('main.dashboard'))
+        
     return render_template('update_profile.html', u=u)
 
 @bp.route('/delete_account', methods=['POST'])
