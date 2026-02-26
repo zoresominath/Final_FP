@@ -8,6 +8,12 @@ def load_user(user_id):
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    
+    # --- NEW FIELDS ---
+    name = db.Column(db.String(150), nullable=True)
+    phone = db.Column(db.String(15), nullable=True)
+    # ------------------
+
     # The Unique ID column (A1, A2... B1...)
     unique_id = db.Column(db.String(20), unique=True, nullable=True)
     
@@ -32,7 +38,6 @@ class User(UserMixin, db.Model):
     meal_requests = db.relationship('MealRequest', backref='user', lazy=True)
     leave_requests = db.relationship('LeaveRequest', backref='user', lazy=True)
     feedback = db.relationship('Feedback', backref='user', lazy=True)
-    # Note: Notification is handled manually via to_user_id query usually
 
 class Subscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -89,5 +94,5 @@ class Payment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    transaction_id = db.Column(db.String(100), nullable=True) # Used for Unique ID
+    transaction_id = db.Column(db.String(100), nullable=True)
     status = db.Column(db.String(20), default='Pending')
