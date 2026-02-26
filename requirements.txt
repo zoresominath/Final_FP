@@ -2,6 +2,7 @@ Flask
 Flask-SQLAlchemy
 Flask-Login
 Flask-Mail
+Flask-WTF
 psycopg2-binary
 qrcode
 Pillow
