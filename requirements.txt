@@ -10,3 +10,4 @@ Werkzeug
 itsdangerous
 sendgrid
 email-validator
+cloudinary
