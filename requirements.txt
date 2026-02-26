@@ -1,9 +1,12 @@
 Flask
 Flask-SQLAlchemy
 Flask-Login
-Flask-Mail
 Flask-WTF
+Flask-Mail
 psycopg2-binary
 qrcode
 Pillow
-werkzeug
+Werkzeug
+itsdangerous
+sendgrid
+email-validator
